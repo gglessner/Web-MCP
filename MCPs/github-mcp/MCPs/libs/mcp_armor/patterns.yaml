@@ -1,0 +1,564 @@
+# MCP Content Filter Configuration
+# 
+# This file defines patterns to redact sensitive information from
+# data flowing through the MCP (Model Context Protocol).
+#
+# Each pattern has:
+#   - name: Descriptive name for the pattern
+#   - pattern: Regular expression to match (use Python regex syntax)
+#   - replacement: Text to replace matched content with
+#   - enabled: Whether this pattern is active (true/false)
+
+# Logging settings
+log_requests: true      # Log incoming MCP requests
+log_responses: true     # Log outgoing MCP responses
+log_file: "mcp_filter.log"  # Log file path (relative or absolute)
+dry_run: false          # If true, don't actually redact, just log
+
+# Filter patterns - add/modify as needed
+patterns:
+  # ========================================
+  # Generic Password Patterns
+  # ========================================
+  - name: "password_key_value"
+    pattern: "(?i)(password|passwd|pwd)\\s*[:=]\\s*[^\\s]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "password_json"
+    pattern: "(?i)[\"'](\"password\"|\"passwd\"|\"pwd\"|\"secret\")[\"']\\s*:\\s*[\"'][^\"']+[\"']"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "password_in_url"
+    pattern: "(?i)\\?.*(password|pwd|pass)=[^&]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Generic API Key Patterns
+  # ========================================
+  - name: "api_key"
+    pattern: "(?i)(api_key|apikey|api-key|apiKey)\\s*[:=]\\s*[^\\s]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "client_id"
+    pattern: "(?i)(client_id|clientid)\\s*[:=]\\s*[A-Za-z0-9\\-_]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "client_secret"
+    pattern: "(?i)(client_secret|app_secret|service_secret)\\s*[:=]\\s*[^\\s]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Generic Token Patterns
+  # ========================================
+  - name: "auth_token"
+    pattern: "(?i)(token|auth_token|access_token|refresh_token)\\s*[:=]\\s*[^\\s]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # GitHub Tokens (all types)
+  # ========================================
+  - name: "github_personal_token"
+    pattern: "ghp_[A-Za-z0-9]{16,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "github_oauth_token"
+    pattern: "gho_[A-Za-z0-9]{16,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "github_user_server_token"
+    pattern: "ghu_[A-Za-z0-9]{16,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "github_server_oauth_token"
+    pattern: "ghs_[A-Za-z0-9]{16,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "github_refresh_token"
+    pattern: "ghr_[A-Za-z0-9]{16,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # AWS Keys
+  # ========================================
+  - name: "aws_access_key"
+    pattern: "AKIA[0-9A-Z]{16}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "aws_secret_key"
+    pattern: "(?i)aws_secret_access_key\\s*[:=]\\s*[^\\s]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "aws_session_token"
+    pattern: "(?i)aws_session_token\\s*[:=]\\s*[A-Za-z0-9+/=]{200,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Azure Keys
+  # ========================================
+  - name: "azure_client_secret"
+    pattern: "(?i)(azure_client_secret|az_client_secret)\\s*[:=]\\s*[^\\s]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "azure_storage_key"
+    pattern: "(?i)azure_storage_key\\s*[:=]\\s*[A-Za-z0-9+/=]{80,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "azure_connection_string"
+    pattern: "DefaultEndpointsProtocol=https;AccountName=[^;]+;AccountKey=[^;]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Google Cloud Keys
+  # ========================================
+  - name: "google_api_key"
+    pattern: "AIza[\\-_A-Za-z0-9]{35}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "google_oauth_client"
+    pattern: "[0-9]+-[A-Za-z0-9_]{32}\\.apps\\.googleusercontent\\.com"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "google_private_key"
+    pattern: "-----BEGIN PRIVATE KEY-----\\n[A-Za-z0-9+/=\\n]+\\n-----END PRIVATE KEY-----"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Certificate/PKey Password Patterns
+  # ========================================
+  - name: "cert_password"
+    pattern: "(?i)(cert_password|key_password|private_key_passphrase|pfx_password|keystore_password)\\s*[:=]\\s*[^\\s]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # SSH Private Keys
+  # ========================================
+  - name: "ssh_private_key"
+    pattern: "-----BEGIN\\s+(RSA\\s+|DSA\\s+|EC\\s+|OPENSSH\\s+|DSA\\s+)?PRIVATE\\s+KEY-----"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "ssh_ed25519_key"
+    pattern: "-----BEGIN OPENSSH\\s+PRIVATE\\s+KEY-----"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # JWT Tokens
+  # ========================================
+  - name: "jwt_token"
+    pattern: "eyJ[A-Za-z0-9-_]+.eyJ[A-Za-z0-9-_]+.[A-Za-z0-9-_]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # HTTP Auth Patterns
+  # ========================================
+  - name: "bearer_token"
+    pattern: "Bearer\\s+[A-Za-z0-9_\\-\\.!]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "basic_auth"
+    pattern: "Basic\\s+[A-Za-z0-9+/=]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Database Connection Strings
+  # ========================================
+  - name: "postgresql_connection"
+    pattern: "(?i)postgresql://[^:]+:[^@]+@"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "mysql_connection"
+    pattern: "(?i)mysql://[^:]+:[^@]+@"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "mongodb_connection"
+    pattern: "(?i)mongodb(\\+srv)?://[^:]+:[^@]+@"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "redis_connection"
+    pattern: "(?i)redis://[^:]+:[^@]+@"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "jdbc_connection"
+    pattern: "(?i)jdbc:[^:]+://[^;]+;password=[^;]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "oracle_connection"
+    pattern: "(?i)(oracle|jdbc:oracle)://[^:]+:[^@]+@"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "mssql_connection"
+    pattern: "(?i)jdbc:sqlserver://[^;]+;password=[^;]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Cloud Provider Tokens
+  # ========================================
+  - name: "kubernetes_token"
+    pattern: "(?i)BearerToken\\s+[A-Za-z0-9._-]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "tanium_token"
+    pattern: "token-[A-Za-z0-9._-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "datadog_api_key"
+    pattern: "(?i)DD_API_KEY\\s*[:=]\\s*[a-f0-9]{32}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "datadog_app_key"
+    pattern: "(?i)DD_APP_KEY\\s*[:=]\\s*[a-f0-9]{40}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # SaaS Service API Keys
+  # ========================================
+  - name: "stripe_live_key"
+    pattern: "sk_live_[A-Za-z0-9]{24,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "stripe_test_key"
+    pattern: "sk_test_[A-Za-z0-9]{24,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "stripe_publishable_key"
+    pattern: "pk_live_[A-Za-z0-9]{24,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "sendgrid_api_key"
+    pattern: "SG\\.[A-Za-z0-9_-]{22}\\.[A-Za-z0-9_-]{43}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "twilio_api_key"
+    pattern: "SK[a-f0-9]{32}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "slack_token"
+    pattern: "xox[baprs]-([0-9a-zA-Z]{10,48})?"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "npm_token"
+    pattern: "npm_[A-Za-z0-9]{36}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "heroku_api_key"
+    pattern: "[hH]eroku[\\s_-]?[aA][pP][iI][\\s_-]?[kK][eE][yY]\\s*[:=]\\s*[a-f0-9]{32}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "github_app_client_secret"
+    pattern: "(?i)(app_client_secret|github_app_secret)\\s*[:=]\\s*[A-Za-z0-9_\\-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # OAuth and SSO
+  # ========================================
+  - name: "oauth_client_secret"
+    pattern: "(?i)oauth_client_secret\\s*[:=]\\s*[^\\s]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "saml_secret"
+    pattern: "(?i)(saml_secret|saml_private_key)\\s*[:=]\\s*[^\\s]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Environment Variable Secrets
+  # ========================================
+  - name: "env_password_var"
+    pattern: "(?i)^(PASSWORD|PASSWD|PWD|SECRET|API_KEY|TOKEN|AUTH|PRIVATE|KEY)\\s*=\\s*[^\\s]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "env_db_password"
+    pattern: "(?i)^(DB_PASSWORD|DATABASE_PASSWORD|MYSQL_PASSWORD|POSTGRES_PASSWORD|ORACLE_PASSWORD|MSSQL_PASSWORD)\\s*=\\s*[^\\s]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "env_cloud_secret"
+    pattern: "(?i)^(AZURE_CLIENT_SECRET|AWS_SECRET_ACCESS_KEY|GCP_PRIVATE_KEY|PRIVATE_KEY)\\s*=.+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # HashiCorp Vault
+  # ========================================
+  - name: "vault_token"
+    pattern: "(?i)vault[\\s_-]?token\\s*[:=]\\s*[A-Za-z0-9+/=]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "vault_approle_secret"
+    pattern: "(?i)VAULT_APPROLE_SECRET_ID\\s*[:=]\\s*[A-Za-z0-9-]{36}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Snowflake
+  # ========================================
+  - name: "snowflake_password"
+    pattern: "(?i)snowflake[\\s_-]?(password|pwd)\\s*[:=]\\s*[^\\s]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "snowflake_private_key"
+    pattern: "-----BEGIN PRIVATE KEY-----\\n[A-Za-z0-9+/=\\n]+\\n-----END PRIVATE KEY-----"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Auth Providers
+  # ========================================
+  - name: "auth0_domain_secret"
+    pattern: "(?i)auth0.*secret\\s*[:=]\\s*[A-Za-z0-9_\\-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "okta_api_token"
+    pattern: "(?i)okta[\\s_-]?(api[\\s_-]?token|api[\\s_-]?key)\\s*[:=]\\s*[A-Za-z0-9\\-\\.]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "firebase_api_key"
+    pattern: "AIza[\\-_A-Za-z0-9]{35}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Generic High-Entropy Strings (fallback)
+  # ========================================
+  - name: "generic_hex_secret"
+    pattern: "(?i)(secret|token|key|auth|password|passwd)\\s*[:=]\\s*[a-f0-9]{32,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "generic_base64_secret"
+    pattern: "(?i)(secret|token|key|auth)\\s*[:=]\\s*[A-Za-z0-9+/]{40,}={0,2}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # GitLab Tokens
+  # ========================================
+  - name: "gitlab_personal_access_token"
+    pattern: "glpat-[A-Za-z0-9\\-=_]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Alibaba Cloud (Aliyun)
+  # ========================================
+  - name: "aliyun_access_key_id"
+    pattern: "LTAI[A-Za-z0-9]{12,30}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "aliyun_access_key_secret"
+    pattern: "AKID[A-Za-z0-9]{13,40}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Messaging Platform Webhooks
+  # ========================================
+  - name: "slack_incoming_webhook"
+    pattern: "https://hooks\\.slack\\.com/services/T[a-zA-Z0-9_]+/B[a-zA-Z0-9_]+/[a-zA-Z0-9_]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "feishu_webhook"
+    pattern: "https://open\\.feishu\\.cn/open-apis/bot/v2/hook/[a-z0-9\\-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # DevOps/CI/CD (Extended)
+  # ========================================
+  - name: "travisci_token"
+    pattern: "(?i)travis[\\s_-]?token\\s*[:=]\\s*[A-Za-z0-9\\-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "circleci_token"
+    pattern: "(?i)circleci[\\s_-]?token\\s*[:=]\\s*[A-Za-z0-9\\-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "artifactory_api_key"
+    pattern: "(?i)artifactory[\\s_-]?api[\\s_-]?key\\s*[:=]\\s*[A-Za-z0-9\\-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Messaging (Extended)
+  # ========================================
+  - name: "telegram_bot_token"
+    pattern: "[0-9]{8,10}:[A-Za-z0-9\\-_]{35,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "discord_bot_token"
+    pattern: "M[A-Za-z0-9\\-_]{23}\\.[A-Za-z0-9\\-_]{6}\\.[A-Za-z0-9\\-_]{27}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "twilio_auth_token"
+    pattern: "(?i)twilio[\\s_-]?auth[\\s_-]?token\\s*[:=]\\s*[A-Za-z0-9\\-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Auth Providers (Extended)
+  # ========================================
+  - name: "auth0_client_secret"
+    pattern: "(?i)auth0[\\s_-]?client[\\s_-]?secret\\s*[:=]\\s*[A-Za-z0-9\\-_]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Cloud Storage (Extended)
+  # ========================================
+  - name: "minio_access_key"
+    pattern: "(?i)minio[\\s_-]?access[\\s_-]?key\\s*[:=]\\s*[A-Za-z0-9\\-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "minio_secret_key"
+    pattern: "(?i)minio[\\s_-]?secret[\\s_-]?key\\s*[:=]\\s*[A-Za-z0-9\\-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "backblaze_key_id"
+    pattern: "(?i)backblaze[\\s_-]?key[\\s_-]?id\\s*[:=]\\s*[A-Za-z0-9\\-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Monitoring/Observability
+  # ========================================
+  - name: "sentry_dsn"
+    pattern: "https://[a-f0-9]{32}@o[0-9]+\\.ingest\\.sentry\\.io/[0-9]+"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "sentry_api_key"
+    pattern: "(?i)sentry[\\s_-]?api[\\s_-]?key\\s*[:=]\\s*[a-f0-9]{32}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "newrelic_license_key"
+    pattern: "(?i)newrelic[\\s_-]?license[\\s_-]?key\\s*[:=]\\s*[a-f0-9]{40}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "honeybadger_api_key"
+    pattern: "(?i)honeybadger[\\s_-]?api[\\s_-]?key\\s*[:=]\\s*[a-f0-9]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Package Registries
+  # ========================================
+  - name: "nuget_api_key"
+    pattern: "(?i)nuget[\\s_-]?api[\\s_-]?key\\s*[:=]\\s*[A-Za-z0-9\\-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "rubygems_api_key"
+    pattern: "(?i)rubygems[\\s_-]?api[\\s_-]?key\\s*[:=]\\s*[A-Za-z0-9\\-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # CDN/Edge
+  # ========================================
+  - name: "cloudflare_api_key"
+    pattern: "(?i)cloudflare[\\s_-]?api[\\s_-]?key\\s*[:=]\\s*[a-f0-9]{37}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "fastly_api_token"
+    pattern: "(?i)fastly[\\s_-]?api[\\s_-]?token\\s*[:=]\\s*[A-Za-z0-9\\-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Machine Learning/AI
+  # ========================================
+  - name: "openai_api_key"
+    pattern: "sk-[A-Za-z0-9]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "huggingface_token"
+    pattern: "hf_[A-Za-z0-9]{34,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "replicate_token"
+    pattern: "(?i)replicate[\\s_-]?token\\s*[:=]\\s*[A-Za-z0-9\\-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  # ========================================
+  # Email Services
+  # ========================================
+  - name: "mailgun_api_key"
+    pattern: "(?i)mailgun[\\s_-]?api[\\s_-]?key\\s*[:=]\\s*[A-Za-z0-9\\-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "mailchimp_api_key"
+    pattern: "(?i)mailchimp[\\s_-]?api[\\s_-]?key\\s*[:=]\\s*[A-Za-z0-9\\-]{20,}"
+    replacement: "[REDACTED]"
+    enabled: true
+
+  - name: "postmark_server_token"
+    pattern: "(?i)postmark[\\s_-]?server[\\s_-]?token\\s*[:=]\\s*[a-f0-9]{32}"
+    replacement: "[REDACTED]"
+    enabled: true

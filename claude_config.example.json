@@ -1,0 +1,26 @@
+{
+  "_comment": "Alternative to .mcp.json — merge this block into ~/.claude/settings.json (under a top-level mcpServers key) if you want these MCPs available from any directory, not just when Claude Code is launched in this repo. Requires WEB_MCP_ROOT to be exported in the shell that launches Claude Code.",
+  "mcpServers": {
+    "browser-mcp": {
+      "command": "${WEB_MCP_ROOT}/.venv/bin/python",
+      "args": ["-m", "browser_mcp.server"]
+    },
+    "burp-mcp": {
+      "command": "${WEB_MCP_ROOT}/.venv/bin/python",
+      "args": ["-m", "burp_mcp.server"]
+    },
+    "parley-mcp": {
+      "command": "${WEB_MCP_ROOT}/.venv/bin/python",
+      "args": ["${WEB_MCP_ROOT}/MCPs/parley-mcp/run_server.py"],
+      "cwd": "${WEB_MCP_ROOT}/MCPs/parley-mcp"
+    },
+    "github-mcp": {
+      "command": "${WEB_MCP_ROOT}/.venv/bin/python",
+      "args": ["-m", "github_mcp"],
+      "cwd": "${WEB_MCP_ROOT}/MCPs/github-mcp/MCPs",
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      }
+    }
+  }
+}

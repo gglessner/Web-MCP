@@ -1,0 +1,20 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+logs/*.log
+.pytest_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+build/
+dist/
+# Burp extension build output (committed build/libs/ excluded from source ignores; produced in Plan B)
+MCPs/burp-mcp/burp-ext/build/
+# Gradle local cache (not the wrapper, which is `gradle/wrapper/`)
+.gradle/
+# Per-tester overrides
+config.local.toml
+# Per-tester copy of Claude config with real PAT
+claude_config.json

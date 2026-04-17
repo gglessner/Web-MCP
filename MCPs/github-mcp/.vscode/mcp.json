@@ -1,0 +1,22 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "github-pat",
+      "description": "GitHub Personal Access Token",
+      "password": true
+    }
+  ],
+  "servers": {
+    "github-mcp": {
+      "type": "stdio",
+      "command": "python",
+      "args": ["-m", "MCPs.github_mcp"],
+      "env": {
+        "PYTHONPATH": ".",
+        "GITHUB_TOKEN": "${input:github-pat}",
+        "GITHUB_BASE_URL": "https://api.github.com"
+      }
+    }
+  }
+}

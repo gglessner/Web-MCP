@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "browser-mcp"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = ["mcp>=1.0.0", "httpx>=0.27", "websockets>=12"]
+
+[project.scripts]
+browser-mcp = "browser_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["browser_mcp*"]

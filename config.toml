@@ -1,0 +1,14 @@
+[burp]
+bridge_url = "http://127.0.0.1:8775"
+
+[browser]
+# Tried in order if absolute path not given
+chrome_candidates = ["chromium", "chromium-browser", "google-chrome", "chrome"]
+default_proxy = "127.0.0.1:8080"
+headless = false
+cdp_port = 9222
+navigation_timeout_s = 30
+
+[logging]
+level = "INFO"
+dir = "logs"

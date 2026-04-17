@@ -1,0 +1,3 @@
+upstream: https://github.com/gglessner/Parley-MCP
+pinned_commit: 40206a5a916a18eacb68fa1f50f1ac8f77f58cee
+pinned_at: 2026-04-16T22:47:52Z

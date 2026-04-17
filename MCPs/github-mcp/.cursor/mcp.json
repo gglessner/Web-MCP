@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "github_mcp": {
+      "command": "python",
+      "args": [
+        "-m",
+        "MCPs.github_mcp"
+      ],
+      "env": {
+        "PYTHONPATH": ".",
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}",
+        "GITHUB_BASE_URL": "https://api.github.com"
+      },
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
