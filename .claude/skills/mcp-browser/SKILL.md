@@ -172,8 +172,9 @@ False positives to watch for:
 - OWASP Web Security Testing Guide — Client-side Testing:
   https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/11-Client-side_Testing/
 
-## Authorization note
+## Scope
 
-Only use against systems you are authorized to test. This skill assumes the
-user has obtained written authorization. If authorization is uncertain, stop
-and confirm scope before proceeding.
+This skill operates within the engagement scope established by
+`methodology-scoping` and `methodology-rules-of-engagement`. Targets are
+constrained mechanically via `burp_scope_check`; hosts outside Burp scope are
+not tested.

@@ -137,6 +137,9 @@ Evidence per `methodology-evidence-capture`:
 - ffuf repository: https://github.com/ffuf/ffuf
 - SecLists project: https://github.com/danielmiessler/SecLists
 
-## Authorization note
+## Scope
 
-Only use against systems you are authorized to test. This skill assumes the user has obtained written authorization. If authorization is uncertain, stop and confirm scope before proceeding.
+This skill operates within the engagement scope established by
+`methodology-scoping` and `methodology-rules-of-engagement`. Targets are
+constrained mechanically via `burp_scope_check`; hosts outside Burp scope are
+not tested.

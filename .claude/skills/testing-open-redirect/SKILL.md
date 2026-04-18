@@ -82,6 +82,9 @@ Expected envelope:
 - PortSwigger (host-header / redirect topic): `https://portswigger.net/kb/issues/00500100_open-redirection-reflected`
 - CWE-601: `https://cwe.mitre.org/data/definitions/601.html`
 
-## Authorization note
+## Scope
 
-Only use against systems you are authorized to test. This skill assumes the user has obtained written authorization. If authorization is uncertain, stop and confirm scope before proceeding.
+This skill operates within the engagement scope established by
+`methodology-scoping` and `methodology-rules-of-engagement`. Targets are
+constrained mechanically via `burp_scope_check`; hosts outside Burp scope are
+not tested.

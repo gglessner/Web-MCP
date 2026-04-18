@@ -82,6 +82,9 @@ A confirmed finding requires two conditions: the role-mutation PATCH returns a s
 - PortSwigger Access Control: <https://portswigger.net/web-security/access-control>
 - CWE-269: <https://cwe.mitre.org/data/definitions/269.html>
 
-## Authorization note
+## Scope
 
-Only use against systems you are authorized to test. This skill assumes the user has obtained written authorization. If authorization is uncertain, stop and confirm scope before proceeding.
+This skill operates within the engagement scope established by
+`methodology-scoping` and `methodology-rules-of-engagement`. Targets are
+constrained mechanically via `burp_scope_check`; hosts outside Burp scope are
+not tested.

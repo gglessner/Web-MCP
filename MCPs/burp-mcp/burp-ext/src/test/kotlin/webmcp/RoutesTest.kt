@@ -52,8 +52,8 @@ class RoutesTest {
     }
 }
 
-class FakeApi : burp.api.montoya.MontoyaApi {
-    override fun burpSuite(): burp.api.montoya.burpsuite.BurpSuite = throw NotImplementedError()
+class FakeApi(private val burp: burp.api.montoya.burpsuite.BurpSuite? = null) : burp.api.montoya.MontoyaApi {
+    override fun burpSuite(): burp.api.montoya.burpsuite.BurpSuite = burp ?: throw NotImplementedError()
     override fun collaborator(): burp.api.montoya.collaborator.Collaborator = throw NotImplementedError()
     override fun comparer(): burp.api.montoya.comparer.Comparer = throw NotImplementedError()
     override fun decoder(): burp.api.montoya.decoder.Decoder = throw NotImplementedError()
@@ -72,4 +72,55 @@ class FakeApi : burp.api.montoya.MontoyaApi {
     override fun userInterface(): burp.api.montoya.ui.UserInterface = throw NotImplementedError()
     override fun utilities(): burp.api.montoya.utilities.Utilities = throw NotImplementedError()
     override fun websockets(): burp.api.montoya.websocket.WebSockets = throw NotImplementedError()
+}
+
+class FakeBurpSuite : burp.api.montoya.burpsuite.BurpSuite {
+    var importedProjectJson: String? = null
+    var exportedProjectPaths: List<String>? = null
+    var projectOptionsFixture: String = """{"proxy":{"match_replace_rules":[{"enabled":true}]}}"""
+
+    override fun exportProjectOptionsAsJson(vararg paths: String): String {
+        exportedProjectPaths = paths.toList()
+        return projectOptionsFixture
+    }
+    override fun importProjectOptionsFromJson(json: String) { importedProjectJson = json }
+    override fun exportUserOptionsAsJson(vararg paths: String): String =
+        error("match-replace must use project options, not user options")
+    override fun importUserOptionsFromJson(json: String): Unit =
+        error("match-replace must use project options, not user options")
+    override fun version(): burp.api.montoya.core.Version = throw NotImplementedError()
+    override fun commandLineArguments(): List<String> = throw NotImplementedError()
+    override fun shutdown(vararg options: burp.api.montoya.burpsuite.ShutdownOptions): Unit = throw NotImplementedError()
+    override fun taskExecutionEngine(): burp.api.montoya.burpsuite.TaskExecutionEngine = throw NotImplementedError()
+}
+
+class MatchReplaceRoutesTest {
+    @Test
+    fun `GET reads project options at proxy match_replace_rules`() {
+        val burp = FakeBurpSuite()
+        val router = Router(api = FakeApi(burp))
+        registerMatchReplaceRoutes(router)
+
+        val r = router.dispatch("GET", "/match-replace", emptyMap(), null)
+        assertEquals(200, r.status)
+        assertEquals(listOf("proxy.match_replace_rules"), burp.exportedProjectPaths)
+        assertTrue(r.body().contains("\"enabled\":true"), "rules should round-trip from project options, got: ${r.body()}")
+    }
+
+    @Test
+    fun `POST writes project options without user_options wrapper`() {
+        val burp = FakeBurpSuite()
+        val router = Router(api = FakeApi(burp))
+        registerMatchReplaceRoutes(router)
+
+        val r = router.dispatch("POST", "/match-replace", emptyMap(),
+            """{"rules":[{"enabled":true,"rule_type":"request_header","string_match":"X: a","string_replace":"X: b"}]}""")
+        assertEquals(200, r.status)
+        val sent = requireNotNull(burp.importedProjectJson) { "importProjectOptionsFromJson was never called" }
+        val decoded = Json.decode(sent) as Map<*, *>
+        assertTrue(decoded.containsKey("proxy"), "expected top-level 'proxy' key, got: $sent")
+        assertTrue(!decoded.containsKey("user_options"), "must not wrap in user_options, got: $sent")
+        val rules = (decoded["proxy"] as Map<*, *>)["match_replace_rules"] as List<*>
+        assertEquals(1, rules.size)
+    }
 }

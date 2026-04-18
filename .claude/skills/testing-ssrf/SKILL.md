@@ -64,6 +64,9 @@ Check the response body for metadata content or confirm OOB callback in the inte
 - PortSwigger SSRF: `https://portswigger.net/web-security/ssrf`
 - CWE-918: `https://cwe.mitre.org/data/definitions/918.html`
 
-## Authorization note
+## Scope
 
-Only use against systems you are authorized to test. This skill assumes the user has obtained written authorization. If authorization is uncertain, stop and confirm scope before proceeding.
+This skill operates within the engagement scope established by
+`methodology-scoping` and `methodology-rules-of-engagement`. Targets are
+constrained mechanically via `burp_scope_check`; hosts outside Burp scope are
+not tested.

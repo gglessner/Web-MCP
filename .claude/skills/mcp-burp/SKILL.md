@@ -178,8 +178,9 @@ by checking Burp → Proxy → Intercept is off and the browser proxy is set.
 - OWASP WSTG — Testing for Proxying:
   https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/
 
-## Authorization note
+## Scope
 
-Only use against systems you are authorized to test. This skill assumes the
-user has obtained written authorization. If authorization is uncertain, stop
-and confirm scope before proceeding.
+This skill operates within the engagement scope established by
+`methodology-scoping` and `methodology-rules-of-engagement`. Targets are
+constrained mechanically via `burp_scope_check`; hosts outside Burp scope are
+not tested.

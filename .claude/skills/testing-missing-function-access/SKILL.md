@@ -73,6 +73,9 @@ A 200 response to an admin endpoint issued under a non-admin session is a confir
 - PortSwigger Access Control: <https://portswigger.net/web-security/access-control>
 - CWE-284: <https://cwe.mitre.org/data/definitions/284.html>
 
-## Authorization note
+## Scope
 
-Only use against systems you are authorized to test. This skill assumes the user has obtained written authorization. If authorization is uncertain, stop and confirm scope before proceeding.
+This skill operates within the engagement scope established by
+`methodology-scoping` and `methodology-rules-of-engagement`. Targets are
+constrained mechanically via `burp_scope_check`; hosts outside Burp scope are
+not tested.

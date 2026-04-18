@@ -149,6 +149,9 @@ production — write it up per `methodology-evidence-capture` with the exact
 - Burp Suite sitemap documentation:
   https://portswigger.net/burp/documentation/desktop/tools/target/site-map
 
-## Authorization note
+## Scope
 
-Only use against systems you are authorized to test. This skill assumes the user has obtained written authorization. If authorization is uncertain, stop and confirm scope before proceeding.
+This skill operates within the engagement scope established by
+`methodology-scoping` and `methodology-rules-of-engagement`. Targets are
+constrained mechanically via `burp_scope_check`; hosts outside Burp scope are
+not tested.

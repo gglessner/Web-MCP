@@ -144,6 +144,9 @@ value (10 s) while all other response characteristics remain identical.
 - CWE-78 — Improper Neutralization of Special Elements used in an OS Command:
   `https://cwe.mitre.org/data/definitions/78.html`
 
-## Authorization note
+## Scope
 
-Only use against systems you are authorized to test. This skill assumes the user has obtained written authorization. If authorization is uncertain, stop and confirm scope before proceeding.
+This skill operates within the engagement scope established by
+`methodology-scoping` and `methodology-rules-of-engagement`. Targets are
+constrained mechanically via `burp_scope_check`; hosts outside Burp scope are
+not tested.

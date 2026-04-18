@@ -150,6 +150,9 @@ and the `burp_repeater_send` tab that reproduces the query.
 - OpenAPI/Swagger specification: https://spec.openapis.org/
 - GraphQL Introspection: https://graphql.org/learn/introspection/
 
-## Authorization note
+## Scope
 
-Only use against systems you are authorized to test. This skill assumes the user has obtained written authorization. If authorization is uncertain, stop and confirm scope before proceeding.
+This skill operates within the engagement scope established by
+`methodology-scoping` and `methodology-rules-of-engagement`. Targets are
+constrained mechanically via `burp_scope_check`; hosts outside Burp scope are
+not tested.
