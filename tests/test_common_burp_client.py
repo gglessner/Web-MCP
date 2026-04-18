@@ -58,3 +58,21 @@ async def test_bad_input_maps():
         async with BurpClient("http://127.0.0.1:8775") as c:
             with pytest.raises(BurpBadInput):
                 await c.proxy_request(999)
+
+
+@pytest.mark.asyncio
+async def test_http_send_returns_data():
+    async with respx.mock(base_url="http://127.0.0.1:8775") as mock:
+        mock.post("/http/send").mock(
+            return_value=httpx.Response(200, json={
+                "ok": True, "data": {
+                    "status": 200, "headers": [{"name": "X", "value": "y"}],
+                    "body_base64": "aGk=", "body_len": 2,
+                    "request_base64": "R0VUIC8=", "time_ms": 5,
+                }
+            })
+        )
+        async with BurpClient("http://127.0.0.1:8775") as c:
+            data = await c.http_send(raw_base64="R0VUIC8=", host="x", port=80, secure=False)
+        assert data["status"] == 200
+        assert data["body_len"] == 2

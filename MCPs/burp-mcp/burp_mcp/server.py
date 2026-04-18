@@ -89,11 +89,37 @@ def _tool_schemas() -> list[Tool]:
             description="Replace match-and-replace rules with the supplied array.",
             inputSchema={"type": "object", "required": ["rules"], "properties": {"rules": {}}},
         ),
+        Tool(
+            name="burp_http_send",
+            description=("Send a raw HTTP request through Burp and return the response "
+                         "(status, headers, timing, body preview). Optional save_to "
+                         "writes <stem>.request.http / <stem>.response.http under the "
+                         "configured evidence dir."),
+            inputSchema={"type": "object", "required": ["raw_base64", "host", "port"],
+                         "properties": {
+                "raw_base64": {"type": "string"}, "host": {"type": "string"},
+                "port": {"type": "integer"}, "secure": {"type": "boolean"},
+                "timeout_ms": {"type": "integer"},
+                "preview_bytes": {"type": "integer"},
+                "include_body": {"type": "boolean"},
+                "save_to": {"type": "string",
+                            "description": "relative path stem under evidence/, e.g. 'F-001/idor-probe'"},
+            }},
+        ),
+        Tool(
+            name="burp_save_request",
+            description=("Write a proxy-history entry's raw request/response to "
+                         "<stem>.request.http / <stem>.response.http under the evidence dir."),
+            inputSchema={"type": "object", "required": ["id", "save_to"], "properties": {
+                "id": {"type": "integer"}, "save_to": {"type": "string"},
+            }},
+        ),
     ]
 
 
 async def _async_main() -> None:
     cfg = load_config(WORKSPACE / "config.toml")
+    evidence_root = WORKSPACE / cfg.evidence.dir
     logger = setup_logger("burp-mcp", log_dir=WORKSPACE / cfg.logging.dir, level=cfg.logging.level)
     logger.info("startup", extra={"bridge": cfg.burp.bridge_url})
 
@@ -105,7 +131,9 @@ async def _async_main() -> None:
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict) -> list[TextContent]:
-        result = await handle(name, arguments or {}, bridge_url=cfg.burp.bridge_url)
+        result = await handle(name, arguments or {},
+                              bridge_url=cfg.burp.bridge_url,
+                              evidence_root=evidence_root)
         return [TextContent(type="text", text=json.dumps(result))]
 
     async with stdio_server() as (read, write):

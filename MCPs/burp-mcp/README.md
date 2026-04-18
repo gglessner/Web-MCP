@@ -12,3 +12,7 @@ MCP server wrapping Burp Suite via the `burp-mcp-bridge` Kotlin extension.
 - Read: `burp_meta`, `burp_proxy_history`, `burp_proxy_request`, `burp_sitemap`, `burp_match_replace_get`, `burp_scope_check`.
 - Write (active testing): `burp_repeater_send`, `burp_scope_modify`, `burp_match_replace_set`.
 - Pro-only: `burp_scanner_scan`, `burp_scanner_issues`, `burp_intruder_launch`. On Community these return `PRO_REQUIRED`.
+
+**Note:** `burp_http_send`'s `timeout_ms` is currently advisory — the bridge
+forwards it but Montoya's `sendRequest()` uses Burp's project-level network
+timeout. Reserved for forward compatibility.

@@ -23,6 +23,7 @@ in this repo):
 
 See `docs/superpowers/specs/2026-04-16-web-mcp-stack-design.md` for the stack
 design and `docs/skill-conventions.md` for the skill-library conventions.
+See `docs/source-informed-workflow.md` for a worked example of source-aware testing.
 Per-sub-project specs and plans live under `docs/superpowers/specs/` and
 `docs/superpowers/plans/`.
 
@@ -60,6 +61,9 @@ fi
 # Build the Burp Kotlin extension
 (cd MCPs/burp-mcp/burp-ext && ./gradlew shadowJar)
 # Produces MCPs/burp-mcp/burp-ext/build/libs/burp-mcp-bridge.jar
+
+# Optional: install pre-commit hooks for ruff
+pip install pre-commit && pre-commit install
 ```
 
 ## Register with Claude Code
@@ -133,6 +137,12 @@ Run these manually to confirm the full stack is wired up.
       navigate to http://127.0.0.1:5055/echo?q=probe. After that, query
       burp_proxy_history with contains='probe' and show me the entries."* — Burp
       history contains the probe request.
+- [ ] `curl -s -X POST http://127.0.0.1:8775/http/send -H 'Content-Type: application/json' \
+      -d '{"raw_base64":"R0VUIC9lY2hvP3E9aGkgSFRUUC8xLjENCkhvc3Q6IDEyNy4wLjAuMTo1MDU1DQpDb25uZWN0aW9uOiBjbG9zZQ0KDQo=","host":"127.0.0.1","port":5055,"secure":false}'`
+      → `{"ok": true, "data": {"status": 200, ...}}` (fixture must be running).
+- [ ] Claude Code prompt: *"Use burp_http_send to GET http://127.0.0.1:5055/echo?q=hello
+      with save_to='smoke/echo', then list the evidence dir."* — `evidence/smoke/echo.request.http`
+      and `.response.http` appear on disk.
 - [ ] Claude Code prompt: *"Use github_search_code to find 'def login' in repo
       `gglessner/Parley-MCP` (or any repo you have access to)."* — github-mcp
       returns results with any secrets redacted by MCP Armor.

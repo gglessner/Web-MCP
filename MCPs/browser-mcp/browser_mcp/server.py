@@ -3,8 +3,6 @@ from __future__ import annotations
 
 import asyncio
 import json
-import os
-import sys
 from pathlib import Path
 
 from mcp.server import Server
@@ -65,9 +63,30 @@ def _tool_schemas() -> list[Tool]:
             inputSchema={"type": "object", "required": ["expression"], "properties": {"expression": {"type": "string"}}},
         ),
         Tool(
+            name="browser_wait_for",
+            description="Poll until a CSS selector is attached (or visible) in the DOM, or time out.",
+            inputSchema={"type": "object", "required": ["selector"], "properties": {
+                "selector": {"type": "string"},
+                "timeout_s": {"type": "number"},
+                "state": {"type": "string", "enum": ["attached", "visible"]},
+            }},
+        ),
+        Tool(
+            name="browser_get_response_body",
+            description=("Return the response body for a CDP Network requestId from "
+                         "browser_network_log. Only works while the page that made the "
+                         "request is still loaded."),
+            inputSchema={"type": "object", "required": ["request_id"],
+                         "properties": {"request_id": {"type": "string"}}},
+        ),
+        Tool(
             name="browser_screenshot",
-            description="Capture a PNG screenshot (base64 in response).",
-            inputSchema={"type": "object", "properties": {"full_page": {"type": "boolean"}}},
+            description="Capture a PNG screenshot. Returns base64 inline, or writes to the evidence dir and returns the path when save_to is set.",
+            inputSchema={"type": "object", "properties": {
+                "full_page": {"type": "boolean"},
+                "save_to": {"type": "string",
+                            "description": "relative path under evidence/, e.g. 'F-001/shot.png'"},
+            }},
         ),
         Tool(
             name="browser_cookies",
@@ -104,8 +123,9 @@ async def _async_main() -> None:
         chrome_candidates=cfg.browser.chrome_candidates,
         cdp_port=cfg.browser.cdp_port,
         default_proxy=cfg.browser.default_proxy,
-        user_data_dir_root="/tmp",
+        user_data_dir_root=cfg.browser.user_data_dir_root,
         navigation_timeout_s=cfg.browser.navigation_timeout_s,
+        evidence_root=WORKSPACE / cfg.evidence.dir,
     )
 
     server = Server("browser-mcp")
@@ -126,6 +146,14 @@ async def _async_main() -> None:
                 result = await session.close()
             elif name == "browser_navigate":
                 result = await session.navigate(arguments["url"])
+            elif name == "browser_wait_for":
+                result = await session.wait_for(
+                    arguments["selector"],
+                    timeout_s=float(arguments.get("timeout_s", 10.0)),
+                    state=arguments.get("state", "attached"),
+                )
+            elif name == "browser_get_response_body":
+                result = await session.get_response_body(arguments["request_id"])
             elif name == "browser_snapshot":
                 result = await session.snapshot()
             elif name == "browser_query":
@@ -137,7 +165,10 @@ async def _async_main() -> None:
             elif name == "browser_eval":
                 result = await session.eval_js(arguments["expression"])
             elif name == "browser_screenshot":
-                result = await session.screenshot(full_page=bool(arguments.get("full_page", False)))
+                result = await session.screenshot(
+                    full_page=bool(arguments.get("full_page", False)),
+                    save_to=arguments.get("save_to"),
+                )
             elif name == "browser_cookies":
                 result = await session.cookies(urls=arguments.get("urls"))
             elif name == "browser_set_cookie":

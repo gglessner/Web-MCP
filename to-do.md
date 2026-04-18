@@ -10,6 +10,7 @@ Items that can't be automated by the build — manual steps and follow-ups. Tick
 - [ ] Extensions → Add → Extension type: **Java** → file: `${WEB_MCP_ROOT}/MCPs/burp-mcp/burp-ext/build/libs/burp-mcp-bridge.jar` → Next.
 - [ ] Burp → Extensions → Output tab shows: `burp-mcp-bridge listening on 127.0.0.1:8775`.
 - [ ] From a shell: `curl -s http://127.0.0.1:8775/meta | python -m json.tool` returns `{"ok": true, "data": {...}}`.
+- [ ] After loading the rebuilt jar: `curl -s -X POST http://127.0.0.1:8775/http/send -H 'Content-Type: application/json' -d '{"raw_base64":"R0VUIC8gSFRUUC8xLjENCkhvc3Q6IGV4YW1wbGUuY29tDQoNCg==","host":"example.com","port":80,"secure":false}'` returns `{"ok": true, ...}` — confirms the new `/http/send` route.
 
 ### 2. Claude Code registration
 - [ ] `cp claude_config.example.json claude_config.json` (the copy is gitignored).
@@ -34,14 +35,14 @@ Items that can't be automated by the build — manual steps and follow-ups. Tick
 ## Deferred / nice-to-have
 
 ### Code-quality follow-ups flagged during reviews (non-blocking)
-- [ ] `common/config.py` — consider `frozen=True` on dataclasses if you want misconfig-at-runtime prevention (see code review on Task 3).
-- [ ] `common/cdp.py` — consider typing tightening: `Callable[[str, dict[str, Any]], None]` for `EventCallback`, `dict[str, Any]` instead of bare `dict` on `send(params=...)`.
-- [ ] `common/cdp.py` — replace the `assert self._ws is not None` guards with explicit `RuntimeError` raises (survives `python -O`).
-- [ ] Timestamp format in `common/logging.py` — add `.%fZ` for sub-second precision and `Z` suffix; useful for correlating MCP logs against Chrome/Burp timestamps.
+- [x] `common/config.py` — consider `frozen=True` on dataclasses if you want misconfig-at-runtime prevention (see code review on Task 3).
+- [x] `common/cdp.py` — consider typing tightening: `Callable[[str, dict[str, Any]], None]` for `EventCallback`, `dict[str, Any]` instead of bare `dict` on `send(params=...)`.
+- [x] `common/cdp.py` — replace the `assert self._ws is not None` guards with explicit `RuntimeError` raises (survives `python -O`).
+- [x] Timestamp format in `common/logging.py` — add `.%fZ` for sub-second precision and `Z` suffix; useful for correlating MCP logs against Chrome/Burp timestamps.
 
 ### UX polish
-- [ ] Add a one-line comment above `[tool.setuptools.packages.find]` in `pyproject.toml` explaining why it's there (setuptools flat-layout auto-discovery fails with sibling non-package dirs).
-- [ ] Write a short `docs/source-informed-workflow.md` with a worked example of combining `github-mcp` + `browser-mcp` + `burp-mcp` for source-aware testing (spec has the concept, no worked example exists yet).
+- [x] Add a one-line comment above `[tool.setuptools.packages.find]` in `pyproject.toml` explaining why it's there (setuptools flat-layout auto-discovery fails with sibling non-package dirs).
+- [x] Write a short `docs/source-informed-workflow.md` with a worked example of combining `github-mcp` + `browser-mcp` + `burp-mcp` for source-aware testing (spec has the concept, no worked example exists yet).
 
 ### Burp extension
 - [ ] Task 9 (match-replace) used `exportUserOptionsAsJson` / `importUserOptionsFromJson`. Confirm this works end-to-end against a Burp Community instance (the API is present, but round-trip fidelity isn't yet verified against real Burp state).
@@ -49,12 +50,12 @@ Items that can't be automated by the build — manual steps and follow-ups. Tick
 
 ### Upstream vendoring
 - [ ] Subscribe to upstream PRs / tags on `gglessner/Parley-MCP` and `gglessner/github-MCP` so you know when to re-vendor.
-- [ ] Add a script `scripts/update-vendored.sh` that does the clone-copy-pin dance documented in the README, reducing the chance of stale `UPSTREAM.txt`.
+- [x] Add a script `scripts/update-vendored.sh` that does the clone-copy-pin dance documented in the README, reducing the chance of stale `UPSTREAM.txt`.
 
 ### Operational
-- [ ] Add `scripts/build-all.sh` — single entry point that rebuilds the Kotlin jar, reinstalls Python editable packages, and runs the test suite. Useful for CI or a fresh-clone tester.
-- [ ] Add basic log rotation or size cap — `logs/*.log` currently grow unbounded.
-- [ ] Consider adding `pre-commit` hooks for ruff + basic Kotlin lint.
+- [x] Add `scripts/build-all.sh` — single entry point that rebuilds the Kotlin jar, reinstalls Python editable packages, and runs the test suite. Useful for CI or a fresh-clone tester.
+- [x] Add basic log rotation or size cap — `logs/*.log` currently grow unbounded.
+- [x] Consider adding `pre-commit` hooks for ruff + basic Kotlin lint.
 
 ## Done (for reference)
 - ✅ Plan A (19 tasks): foundation + browser-mcp
@@ -68,3 +69,5 @@ Items that can't be automated by the build — manual steps and follow-ups. Tick
   - Sub-project 3: 4 `methodology-*` + 6 `recon-*` (10 skills)
   - Sub-project 4: 30 `testing-*` attack-technique runbooks
   - Sub-project 5: 4 `reporting-*` deliverable skills
+- ✅ Cycle B (workhorse tools): burp_http_send, burp_save_request, browser_wait_for, browser_get_response_body, evidence persistence — see docs/superpowers/specs/2026-04-17-workhorse-tools-design.md
+- ✅ Cycle A (hardening pass): 18 items — see docs/superpowers/specs/2026-04-17-hardening-pass-design.md

@@ -61,7 +61,7 @@ class BurpClient:
         assert self._client is not None
         try:
             resp = await self._client.request(method, path, **kwargs)
-        except (httpx.ConnectError, httpx.TimeoutException, httpx.NetworkError) as e:
+        except (httpx.ConnectError, httpx.TimeoutException, httpx.TransportError) as e:
             raise BurpUnavailable(
                 f"cannot reach bridge at {self._base}: {e} "
                 f"— ensure Burp is running with burp-mcp-bridge.jar loaded"
@@ -84,10 +84,14 @@ class BurpClient:
         limit: int = 50,
     ) -> dict:
         params: dict[str, Any] = {"cursor": cursor, "limit": limit}
-        if host: params["host"] = host
-        if method: params["method"] = method
-        if status is not None: params["status"] = status
-        if contains: params["contains"] = contains
+        if host:
+            params["host"] = host
+        if method:
+            params["method"] = method
+        if status is not None:
+            params["status"] = status
+        if contains:
+            params["contains"] = contains
         return await self._request("GET", "/proxy/history", params=params)
 
     async def proxy_request(self, request_id: int) -> dict:
@@ -134,3 +138,12 @@ class BurpClient:
 
     async def match_replace_set(self, rules: Any) -> dict:
         return await self._request("POST", "/match-replace", json={"rules": rules})
+
+    async def http_send(
+        self, *, raw_base64: str, host: str, port: int,
+        secure: bool = True, timeout_ms: int = 30000,
+    ) -> dict:
+        return await self._request("POST", "/http/send", json={
+            "raw_base64": raw_base64, "host": host, "port": port,
+            "secure": secure, "timeout_ms": timeout_ms,
+        })

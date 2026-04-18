@@ -42,15 +42,21 @@ Prerequisites:
    through recent requests; narrow with `method`, `status`, or `contains`.
 4. Call `burp_proxy_request(id=<N>)` — retrieve the full raw
    request/response for a specific history entry.
-5. Base64-encode the raw request for Repeater:
-   `echo -n "GET / HTTP/1.1\r\nHost: target.example.com\r\n\r\n" | base64`
-   then call `burp_repeater_send(raw_base64=<b64>, host="target.example.com", port=443, secure=true)`.
-6. Review the sitemap: `burp_sitemap(prefix="https://target.example.com/api")`.
-7. (Pro only) Start an active scan: `burp_scanner_scan(url="https://target.example.com", mode="active")`.
-8. (Pro only) Poll for issues: `burp_scanner_issues()`.
-9. (Pro only) Send to Intruder: `burp_intruder_launch(raw_base64=<b64>, host="target.example.com", port=443, secure=true)`.
-10. Inspect or update match-replace rules:
+5. Send a probe and read the response in one call:
+   `burp_http_send(raw_base64=<b64>, host="target.example.com", port=443, secure=true, save_to="F-001/probe-1")`
+   — returns `{status, headers, body_preview, body_len, time_ms, saved}`. Use this
+   for all automated probing (boolean diffs, error-string detection, timing).
+6. (Optional) Open the same request in the Burp UI for manual follow-up:
+   `burp_repeater_send(raw_base64=<b64>, host=..., port=443, secure=true, tab_name="probe-1")`.
+7. Review the sitemap: `burp_sitemap(prefix="https://target.example.com/api")`.
+8. (Pro only) Start an active scan: `burp_scanner_scan(url="https://target.example.com", mode="active")`.
+9. (Pro only) Poll for issues: `burp_scanner_issues()`.
+10. (Pro only) Send to Intruder: `burp_intruder_launch(raw_base64=<b64>, host="target.example.com", port=443, secure=true)`.
+11. Inspect or update match-replace rules:
     `burp_match_replace_get()` then `burp_match_replace_set(rules=[...])`.
+12. Persist a proxy-history entry as evidence:
+    `burp_save_request(id=<N>, save_to="F-001/baseline")` — writes
+    `evidence/F-001/baseline.request.http` and `.response.http`.
 
 ## Tool commands
 
@@ -60,9 +66,24 @@ burp_meta()
 # Success: {"ok": true, "data": {"edition": "COMMUNITY_EDITION", "version": "...", "bridge_version": "0.1.0"}}
 # Failure: {"ok": false, "error": {"code": "BURP_UNAVAILABLE", ...}}
 
+# Probe + capture in one call (workhorse)
+burp_http_send(raw_base64="R0VUIC9hcGkvdXNlcnMgSFRUUC8xLjENCkhvc3Q6IHRhcmdldC5leGFtcGxlLmNvbQ0KDQo=",
+               host="target.example.com", port=443, secure=true,
+               preview_bytes=4096, save_to="F-001/idor-probe")
+# Success: {"ok": true, "data": {"status": 200, "time_ms": 87, "body_len": 14302,
+#   "headers": [...], "body_preview": "<!doctype html>...",
+#   "saved": {"request": "evidence/F-001/idor-probe.request.http",
+#             "response": "evidence/F-001/idor-probe.response.http"}}}
+# Target unreachable: {"ok": true, "data": {"status": null, "body_len": 0, ...}}
+
+# Persist an existing history entry
+burp_save_request(id=12, save_to="F-001/baseline")
+# Success: {"ok": true, "data": {"saved": {"request": "evidence/F-001/baseline.request.http",
+#                                           "response": "evidence/F-001/baseline.response.http"}}}
+
 # Scope
 burp_scope_check(urls=["https://target.example.com/admin"])
-# Success: {"ok": true, "data": {"results": [{"url": "...", "in_scope": true}]}}
+# Success: {"ok": true, "data": {"checks": {"https://target.example.com/admin": true}}}
 
 burp_scope_modify(add=["https://target.example.com"], remove=[])
 # Success: {"ok": true, "data": {"added": 1, "removed": 0}}

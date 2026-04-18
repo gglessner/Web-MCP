@@ -21,7 +21,10 @@ fun registerRepeaterRoutes(router: Router) {
                 "code" to "BAD_INPUT", "message" to "raw_base64, host, port required"
             )))
         }
-        val rawBytes = Base64.getDecoder().decode(rawB64)
+        val rawBytes = runCatching { Base64.getDecoder().decode(rawB64) }.getOrElse {
+            return@register Response(400, mapOf("ok" to false, "error" to mapOf(
+                "code" to "BAD_INPUT", "message" to "raw_base64 is not valid base64")))
+        }
         val service = HttpService.httpService(host, port, secure)
         val req = HttpRequest.httpRequest(service, MByteArray.byteArray(*rawBytes))
         ctx.api.repeater().sendToRepeater(req, tabName)

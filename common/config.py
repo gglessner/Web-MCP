@@ -6,31 +6,38 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
-@dataclass
+@dataclass(frozen=True)
 class BurpConfig:
     bridge_url: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class BrowserConfig:
     chrome_candidates: list[str]
     default_proxy: str
     headless: bool
     cdp_port: int
     navigation_timeout_s: int
+    user_data_dir_root: str
 
 
-@dataclass
+@dataclass(frozen=True)
 class LoggingConfig:
     level: str
     dir: str
 
 
-@dataclass
+@dataclass(frozen=True)
+class EvidenceConfig:
+    dir: str
+
+
+@dataclass(frozen=True)
 class Config:
     burp: BurpConfig
     browser: BrowserConfig
     logging: LoggingConfig
+    evidence: EvidenceConfig
     source: Path
 
 
@@ -61,6 +68,7 @@ def load_config(path: str | Path = "config.toml") -> Config:
             burp=BurpConfig(**data["burp"]),
             browser=BrowserConfig(**data["browser"]),
             logging=LoggingConfig(**data["logging"]),
+            evidence=EvidenceConfig(**data["evidence"]),
             source=path,
         )
     except (KeyError, TypeError) as e:

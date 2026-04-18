@@ -20,10 +20,11 @@ token, a one-time redirect, or any other state that cannot be recreated later.
 
 ## Test steps
 
-1. Save the raw HTTP request via `burp_proxy_request(id=N)` — capture both the
-   `request` and `response` fields.
-2. Capture a rendered screenshot via `browser_screenshot(full_page=true)` —
-   required if the bug has a visible UI component; optional otherwise.
+1. Persist the raw exchange: either
+   `burp_http_send(..., save_to="F-NNN/<label>")` (for probes you send) or
+   `burp_save_request(id=N, save_to="F-NNN/<label>")` (for history entries).
+2. Capture the rendered state:
+   `browser_screenshot(full_page=true, save_to="F-NNN/<label>.png")`.
 3. Record the numbered MCP tool-call sequence that reproduced the bug, verbatim.
    Another operator must be able to paste the sequence into a fresh Claude
    session and reproduce the same outcome.
@@ -34,12 +35,21 @@ token, a one-time redirect, or any other state that cannot be recreated later.
 
 ## Tool commands
 
-- `burp_proxy_request(id=12)` — save full raw request + response.
-- `browser_screenshot(full_page=true)` — save rendered screenshot as PNG
-  (base64 in the response; decode and write to a file in the engagement's
-  evidence directory).
-- `burp_repeater_send(raw_base64=<b64>, host=..., port=443, secure=true, tab_name="repro-<finding-id>")` — parameterized reproduction.
-- `get_file_contents(repo_url="https://github.com/org/name", path="src/api/export.py", ref="<sha>")` — source-side evidence.
+- `burp_http_send(raw_base64=<b64>, host=..., port=443, secure=true, save_to="F-001/probe")`
+  — sends the probe **and** writes `evidence/F-001/probe.request.http` +
+  `evidence/F-001/probe.response.http` in one call. The returned
+  `body_preview` lets Claude diff without dumping the full body into context.
+- `burp_save_request(id=12, save_to="F-001/baseline")` — persist an existing
+  proxy-history entry as `.request.http` / `.response.http`.
+- `browser_screenshot(full_page=true, save_to="F-001/screenshot.png")` — writes
+  the PNG to disk; response contains the path and byte count, not the base64.
+- `get_file_contents(repo_url="https://github.com/org/name", path="src/api/export.py", ref="<sha>")`
+  — source-side evidence (unchanged).
+
+The evidence root is `[evidence] dir` in `config.toml` (default `evidence/`,
+gitignored). Set a per-engagement path in `config.local.toml`. `save_to` is
+always **relative** to that root; absolute paths and `..` are rejected with
+`BAD_INPUT`.
 
 Preferred evidence-directory layout:
 

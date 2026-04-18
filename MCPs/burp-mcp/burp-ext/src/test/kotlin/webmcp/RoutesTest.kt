@@ -25,6 +25,25 @@ class RoutesTest {
     }
 
     @Test
+    fun `http send route registered and validates body`() {
+        val router = Router(api = FakeApi())
+        registerHttpSendRoutes(router)
+        val r = router.dispatch("POST", "/http/send", emptyMap(), "{}")
+        assertEquals(400, r.status)
+        assertTrue(r.body().contains("BAD_INPUT"))
+    }
+
+    @Test
+    fun `http send rejects invalid base64`() {
+        val router = Router(api = FakeApi())
+        registerHttpSendRoutes(router)
+        val r = router.dispatch("POST", "/http/send", emptyMap(),
+            """{"raw_base64":"!!!not-b64","host":"x","port":80}""")
+        assertEquals(400, r.status)
+        assertTrue(r.body().contains("BAD_INPUT"))
+    }
+
+    @Test
     fun `json roundtrip`() {
         val payload = mapOf("ok" to true, "data" to listOf(1, "two", mapOf("k" to null)))
         val encoded = Json.encode(payload)

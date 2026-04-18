@@ -25,7 +25,10 @@ fun registerIntruderRoutes(router: Router) {
                     "message" to "raw_base64, host, port required")
             ))
         }
-        val bytes = Base64.getDecoder().decode(rawB64)
+        val bytes = runCatching { Base64.getDecoder().decode(rawB64) }.getOrElse {
+            return@register Response(400, mapOf("ok" to false, "error" to mapOf(
+                "code" to "BAD_INPUT", "message" to "raw_base64 is not valid base64")))
+        }
         val svc = HttpService.httpService(host, port, secure)
         val req = HttpRequest.httpRequest(svc, MByteArray.byteArray(*bytes))
         ctx.api.intruder().sendToIntruder(req, tabName)

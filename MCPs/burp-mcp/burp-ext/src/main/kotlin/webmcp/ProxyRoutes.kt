@@ -7,7 +7,7 @@ fun registerProxyRoutes(router: Router) {
     router.register("GET", "/proxy/history") { ctx ->
         val host = ctx.query["host"]
         val method = ctx.query["method"]
-        val statusMin = ctx.query["status"]?.toIntOrNull()
+        val status = ctx.query["status"]?.toIntOrNull()
         val contains = ctx.query["contains"]
         val limit = (ctx.query["limit"]?.toIntOrNull() ?: 50).coerceAtMost(500)
         val cursor = ctx.query["cursor"]?.toIntOrNull() ?: 0
@@ -16,7 +16,7 @@ fun registerProxyRoutes(router: Router) {
         val filtered = all.asSequence()
             .filter { host == null || it.finalRequest().httpService().host() == host }
             .filter { method == null || it.finalRequest().method().equals(method, ignoreCase = true) }
-            .filter { statusMin == null || (it.originalResponse()?.statusCode()?.toInt() ?: 0) >= statusMin }
+            .filter { status == null || (it.originalResponse()?.statusCode()?.toInt() ?: -1) == status }
             .filter { contains == null || it.contains(contains, false) }
             .toList()
 

@@ -4,7 +4,7 @@ import json
 import pytest
 import websockets
 
-from common.cdp import CDPSession, CDPError
+from common.cdp import CDPSession
 
 
 async def _fake_cdp(ws):
@@ -104,3 +104,10 @@ async def test_cdp_clean_exit_with_pending_send():
                 await pending
 
         await asyncio.wait_for(run(), timeout=2.0)
+
+
+@pytest.mark.asyncio
+async def test_send_on_unopened_session_raises_runtimeerror():
+    sess = CDPSession("ws://127.0.0.1:1")
+    with pytest.raises(RuntimeError, match="not open"):
+        await sess.send("X.y")

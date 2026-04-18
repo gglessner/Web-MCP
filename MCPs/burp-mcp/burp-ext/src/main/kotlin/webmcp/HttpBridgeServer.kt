@@ -20,6 +20,7 @@ class HttpBridgeServer(private val api: MontoyaApi, private val port: Int) {
         registerScannerRoutes(router)
         registerIntruderRoutes(router)
         registerMatchReplaceRoutes(router)
+        registerHttpSendRoutes(router)
         server.executor = Executors.newFixedThreadPool(4)
         server.createContext("/") { exchange -> handle(exchange) }
     }

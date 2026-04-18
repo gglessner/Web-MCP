@@ -50,3 +50,17 @@ async def test_close_is_idempotent(tmp_path):
     # second close should still succeed with no errors
     r2 = await sess.close()
     assert r2["ok"] is True
+
+
+@pytest.mark.asyncio
+async def test_close_removes_user_data_dir(tmp_path):
+    sess = BrowserSession(chrome_candidates=[], cdp_port=9222, default_proxy=None,
+                          user_data_dir_root=str(tmp_path))
+    udd = tmp_path / "fake-udd"
+    udd.mkdir()
+    (udd / "leftover").write_text("x")
+    sess._udd = str(udd)
+    sess._proc = _FakeProc()
+    await sess.close()
+    assert not udd.exists()
+    assert sess._udd is None

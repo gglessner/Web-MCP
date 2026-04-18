@@ -18,3 +18,5 @@ MCPs/burp-mcp/burp-ext/build/
 config.local.toml
 # Per-tester copy of Claude config with real PAT
 claude_config.json
+# Per-engagement evidence captures
+evidence/

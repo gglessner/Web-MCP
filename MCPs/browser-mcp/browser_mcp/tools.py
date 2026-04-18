@@ -3,13 +3,15 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import os
+import shutil
 import tempfile
 import time
 from collections import deque
-from typing import Any
 
-from common.cdp import CDPSession, discover_targets
+from pathlib import Path
+
+from common.cdp import CDPError, CDPSession, discover_targets
+from common.evidence import EvidencePathError, write_evidence
 from common.mcp_base import ErrorCode, error_envelope, ok_envelope
 
 from .chrome_launcher import (
@@ -31,14 +33,17 @@ class BrowserSession:
         default_proxy: str | None,
         user_data_dir_root: str,
         navigation_timeout_s: int = 30,
+        evidence_root: Path | None = None,
     ) -> None:
         self._candidates = chrome_candidates
         self._cdp_port = cdp_port
         self._default_proxy = default_proxy
         self._udd_root = user_data_dir_root
         self._nav_timeout = navigation_timeout_s
+        self._evidence_root = evidence_root
 
         self._proc = None
+        self._udd: str | None = None
         self._cdp: CDPSession | None = None
         self._cdp_cm = None
         self._network_log: deque[dict] = deque(maxlen=5000)
@@ -79,6 +84,7 @@ class BrowserSession:
             return error_envelope(ErrorCode.INTERNAL, str(e))
 
         udd = tempfile.mkdtemp(prefix="web-mcp-chrome-", dir=self._udd_root)
+        self._udd = udd
         argv = build_chrome_argv(
             binary=binary,
             cdp_port=self._cdp_port,
@@ -137,6 +143,9 @@ class BrowserSession:
                 except Exception:
                     pass
         self._proc = None
+        if self._udd:
+            shutil.rmtree(self._udd, ignore_errors=True)
+        self._udd = None
         return ok_envelope({"closed": True})
 
     def _require_attached(self) -> dict | None:
@@ -172,6 +181,40 @@ class BrowserSession:
                 detail={"url": url},
             )
         return ok_envelope({"url": url})
+
+    async def wait_for(self, selector: str, *, timeout_s: float = 10.0,
+                       state: str = "attached") -> dict:
+        err = self._require_attached()
+        if err:
+            return err
+        if state not in ("attached", "visible"):
+            return error_envelope(ErrorCode.BAD_INPUT,
+                                  f"state must be 'attached' or 'visible', got {state!r}")
+        deadline = time.monotonic() + timeout_s
+        interval = 0.1
+        while True:
+            root = await self._root_node_id()
+            found = await self._cdp.send(
+                "DOM.querySelector", {"nodeId": root, "selector": selector}
+            )
+            node_id = found.get("nodeId", 0)
+            if node_id:
+                if state == "attached":
+                    return ok_envelope({"nodeId": node_id, "selector": selector})
+                try:
+                    await self._cdp.send("DOM.getBoxModel", {"nodeId": node_id})
+                    return ok_envelope({"nodeId": node_id, "selector": selector})
+                except Exception:
+                    pass
+            if time.monotonic() >= deadline:
+                break
+            await asyncio.sleep(interval)
+            interval = min(interval * 1.5, 0.5)
+        return error_envelope(
+            ErrorCode.TIMEOUT,
+            f"selector not {state} within {timeout_s}s",
+            detail={"selector": selector},
+        )
 
     async def snapshot(self) -> dict:
         err = self._require_attached()
@@ -242,13 +285,25 @@ class BrowserSession:
         await self._cdp.send("Input.insertText", {"text": text})
         return ok_envelope({"filled": selector, "length": len(text)})
 
-    async def screenshot(self, *, full_page: bool = False) -> dict:
+    async def screenshot(self, *, full_page: bool = False,
+                         save_to: str | None = None) -> dict:
         err = self._require_attached()
         if err:
             return err
         params = {"format": "png", "captureBeyondViewport": full_page}
         resp = await self._cdp.send("Page.captureScreenshot", params)
-        return ok_envelope({"format": "png", "base64": resp.get("data", "")})
+        b64 = resp.get("data", "")
+        if save_to:
+            if self._evidence_root is None:
+                return error_envelope(ErrorCode.INTERNAL, "evidence_root not configured")
+            try:
+                png = base64.b64decode(b64)
+                path = write_evidence(self._evidence_root, save_to, png)
+            except EvidencePathError as e:
+                return error_envelope(ErrorCode.BAD_INPUT, str(e))
+            rel = str(path.relative_to(Path(self._evidence_root).resolve().parent))
+            return ok_envelope({"format": "png", "bytes": len(png), "saved": rel})
+        return ok_envelope({"format": "png", "base64": b64})
 
     async def eval_js(self, expression: str) -> dict:
         err = self._require_attached()
@@ -281,6 +336,30 @@ class BrowserSession:
             return err
         events = [e for e in self._network_log if e["seq"] > since_seq]
         return ok_envelope({"events": events, "next_seq": self._network_seq})
+
+    async def get_response_body(self, request_id: str) -> dict:
+        err = self._require_attached()
+        if err:
+            return err
+        try:
+            resp = await self._cdp.send(
+                "Network.getResponseBody", {"requestId": request_id}
+            )
+        except CDPError as e:
+            return error_envelope(
+                ErrorCode.BAD_INPUT,
+                f"response body unavailable for requestId={request_id}: {e}",
+                detail={"hint": "body is only retrievable while the originating page is loaded"},
+            )
+        body = resp.get("body", "")
+        is_b64 = resp.get("base64Encoded", False)
+        length = len(base64.b64decode(body)) if is_b64 and body else len(body)
+        return ok_envelope({
+            "request_id": request_id,
+            "base64_encoded": is_b64,
+            "body": body,
+            "length": length,
+        })
 
     async def set_cookie(
         self,

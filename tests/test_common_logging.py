@@ -1,5 +1,6 @@
 import json
-import logging
+import re
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from common.logging import setup_logger
@@ -41,3 +42,19 @@ def test_setup_logger_does_not_leak_taskname(tmp_path: Path):
     line = (tmp_path / "async-mcp.log").read_text().strip().splitlines()[-1]
     record = json.loads(line)
     assert "taskName" not in record, f"taskName leaked: keys={sorted(record.keys())}"
+
+
+def test_log_timestamp_has_microseconds_and_z(tmp_path):
+    logger = setup_logger("ts-mcp", log_dir=tmp_path)
+    logger.info("x")
+    line = (tmp_path / "ts-mcp.log").read_text().splitlines()[-1]
+    rec = json.loads(line)
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z", rec["ts"])
+
+
+def test_logger_uses_rotating_handler(tmp_path):
+    logger = setup_logger("rot-mcp", log_dir=tmp_path)
+    h = logger.handlers[0]
+    assert isinstance(h, RotatingFileHandler)
+    assert h.maxBytes == 10 * 1024 * 1024
+    assert h.backupCount == 3

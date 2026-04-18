@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import datetime, timezone
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 
@@ -16,7 +18,8 @@ class _JsonFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         payload = {
-            "ts": self.formatTime(record, "%Y-%m-%dT%H:%M:%S"),
+            "ts": datetime.fromtimestamp(record.created, tz=timezone.utc)
+                  .strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
             "level": record.levelname,
             "logger": record.name,
             "msg": record.getMessage(),
@@ -49,7 +52,9 @@ def setup_logger(
     logger.setLevel(level)
     logger.propagate = False
 
-    file_handler = logging.FileHandler(log_dir / f"{name}.log", encoding="utf-8")
+    file_handler = RotatingFileHandler(
+        log_dir / f"{name}.log", maxBytes=10 * 1024 * 1024, backupCount=3, encoding="utf-8"
+    )
     file_handler.setFormatter(_JsonFormatter())
     logger.addHandler(file_handler)
 

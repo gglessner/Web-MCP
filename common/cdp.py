@@ -10,7 +10,7 @@ import websockets
 from websockets.asyncio.client import ClientConnection
 
 
-EventCallback = Callable[[str, dict], None]
+EventCallback = Callable[[str, dict[str, Any]], None]
 
 
 class CDPError(RuntimeError):
@@ -66,8 +66,10 @@ class CDPSession:
                 fut.set_exception(ConnectionError("CDP session closed"))
         self._pending.clear()
 
-    async def send(self, method: str, params: dict | None = None) -> Any:
-        assert self._ws is not None, "session not open"
+    async def send(self, method: str, params: dict[str, Any] | None = None) -> Any:
+        if self._ws is None:
+            raise RuntimeError("CDP session not open; use 'async with CDPSession(...)'")
+
         mid = next(self._id_seq)
         fut: asyncio.Future = asyncio.get_running_loop().create_future()
         self._pending[mid] = fut
@@ -75,7 +77,9 @@ class CDPSession:
         return await fut
 
     async def _reader(self) -> None:
-        assert self._ws is not None
+        if self._ws is None:
+            raise RuntimeError("CDP session not open; use 'async with CDPSession(...)'")
+
         try:
             async for raw in self._ws:
                 msg = json.loads(raw)

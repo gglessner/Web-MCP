@@ -33,23 +33,31 @@ Prerequisite: the `browser-mcp` server is registered in Claude Code (see
    interception.
 2. `browser_navigate(url="<target-url>")` — waits for the `Page.loadEventFired`
    event (default 30 s timeout).
-3. `browser_snapshot()` — returns the full DOM plus the accessibility tree.
+3. `browser_wait_for(selector="<css-selector>", timeout_s=10, state="visible")` —
+   for SPAs and async-rendered content, block until the element is in the DOM
+   (and visible) before snapshotting or interacting.
+4. `browser_snapshot()` — returns the full DOM plus the accessibility tree.
    Use for high-level structure.
-4. Interact with the page as needed:
+5. Interact with the page as needed:
    - `browser_query(selector="<css-selector>")` — returns `outerHTML` of the
      first match.
    - `browser_click(selector="<css-selector>")` — dispatches a real mouse
      event at the element's centroid.
    - `browser_fill(selector="<css-selector>", text="<value>")` — focuses and
      types into an input.
-5. `browser_eval(expression="<javascript>")` — returns the value or the
+6. `browser_eval(expression="<javascript>")` — returns the value or the
    exception text. Use for concrete proof of client-side behavior.
-6. `browser_network_log(since_seq=<N>)` — returns CDP `Network.*` events
+7. `browser_network_log(since_seq=<N>)` — returns CDP `Network.*` events
    accumulated since sequence `N` (use `0` on first call).
-7. `browser_cookies(urls=["<origin>"])` / `browser_set_cookie(...)` — inspect
+8. `browser_get_response_body(request_id="<id-from-network-log>")` — fetch the
+   body of an XHR/fetch response. The `request_id` comes from
+   `params.requestId` on `Network.responseReceived` events in
+   `browser_network_log`. Only works while the page that made the request is
+   still loaded.
+9. `browser_cookies(urls=["<origin>"])` / `browser_set_cookie(...)` — inspect
    or modify cookies for the active session.
-8. `browser_screenshot(full_page=true)` — capture evidence as base64 PNG.
-9. `browser_close()` — terminate the Chrome subprocess. Idempotent.
+10. `browser_screenshot(full_page=true)` — capture evidence as base64 PNG.
+11. `browser_close()` — terminate the Chrome subprocess. Idempotent.
 
 ## Tool commands
 
@@ -87,9 +95,23 @@ browser_eval(expression="!!document.querySelector('svg[onload]')")
 browser_network_log(since_seq=0)
 # Success: {"ok": true, "data": {"events": [...], "next_seq": 27}}
 
-# 8. Capture evidence
-browser_screenshot(full_page=true)
-# Success: {"ok": true, "data": {"format": "png", "base64": "iVBORw0K..."}}
+# Read an XHR response body
+browser_get_response_body(request_id="12345.67")
+# Success: {"ok": true, "data": {"request_id": "12345.67", "base64_encoded": false,
+#                                 "body": "{\"users\":[...]}", "length": 812}}
+# Failure: {"ok": false, "error": {"code": "BAD_INPUT", "detail":
+#           {"hint": "body is only retrievable while the originating page is loaded"}}}
+
+# Wait for an SPA element
+browser_wait_for(selector="div.results", timeout_s=10, state="visible")
+# Success: {"ok": true, "data": {"nodeId": 42, "selector": "div.results"}}
+# Failure: {"ok": false, "error": {"code": "TIMEOUT", "detail": {"selector": "div.results"}}}
+
+# 8. Capture evidence to disk (no base64 in context)
+browser_screenshot(full_page=true, save_to="F-001/login.png")
+# Success: {"ok": true, "data": {"format": "png", "bytes": 48211,
+#                                 "saved": "evidence/F-001/login.png"}}
+# Omit save_to for inline base64 (legacy behaviour).
 
 # 9. Clean up
 browser_close()

@@ -14,7 +14,7 @@ import httpx
 import pytest
 
 from browser_mcp.tools import BrowserSession
-from common.burp_client import BurpClient, BurpUnavailable
+from common.burp_client import BurpClient
 
 
 pytestmark = pytest.mark.integration
@@ -57,3 +57,24 @@ async def test_browser_through_burp_to_fixture(live_target: str):
         entries = history.get("entries", [])
         assert any(marker in (e.get("url") or "") for e in entries), \
             f"probe marker not found in proxy history; entries={entries}"
+
+
+@pytest.mark.skipif(not _bridge_available(),
+                    reason="burp-mcp-bridge not responding on 127.0.0.1:8775")
+@pytest.mark.asyncio
+async def test_burp_http_send_against_fixture(live_target: str, tmp_path):
+    import base64
+    from burp_mcp.tool_handlers import handle
+
+    raw = (b"GET /echo?q=chain-probe HTTP/1.1\r\n"
+           b"Host: 127.0.0.1:5055\r\nConnection: close\r\n\r\n")
+    result = await handle(
+        "burp_http_send",
+        {"raw_base64": base64.b64encode(raw).decode(),
+         "host": "127.0.0.1", "port": 5055, "secure": False},
+        bridge_url="http://127.0.0.1:8775",
+        evidence_root=tmp_path / "evidence",
+    )
+    assert result["ok"] is True, result
+    assert result["data"]["status"] == 200
+    assert "chain-probe" in result["data"]["body_preview"]

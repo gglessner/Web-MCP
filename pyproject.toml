@@ -8,6 +8,8 @@ version = "0.1.0"
 description = "Web-MCP: four-MCP stack for AI-driven web security auditing"
 requires-python = ">=3.13"
 
+# Restrict discovery to common/* — setuptools flat-layout autodiscovery fails
+# when sibling non-package dirs (MCPs/, docs/, tests/) exist at the root.
 [tool.setuptools.packages.find]
 include = ["common*"]
 
@@ -32,3 +34,4 @@ markers = [
 [tool.ruff]
 line-length = 100
 target-version = "py313"
+extend-exclude = ["MCPs/parley-mcp", "MCPs/github-mcp", "MCPs/burp-mcp/burp-ext"]
