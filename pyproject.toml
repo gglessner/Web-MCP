@@ -7,6 +7,7 @@ name = "web-mcp-workspace"
 version = "0.1.0"
 description = "Web-MCP: four-MCP stack for AI-driven web security auditing"
 requires-python = ">=3.13"
+dependencies = ["tomli_w>=1.0"]
 
 # Restrict discovery to common/* — setuptools flat-layout autodiscovery fails
 # when sibling non-package dirs (MCPs/, docs/, tests/) exist at the root.

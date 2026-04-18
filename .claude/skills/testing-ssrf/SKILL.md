@@ -58,6 +58,16 @@ Check the response body for metadata content or confirm OOB callback in the inte
 - **Evidence** per `methodology-evidence-capture`: include the payload request, the OOB log entry or the raw response containing metadata or file contents.
 - **Fix:** allow-list outbound targets; disable unused URL schemes; pin resolutions or block RFC1918 + 169.254.0.0/16 at egress.
 
+## Blind detection (OOB)
+
+When the response gives no direct signal, use the OOB receiver:
+
+1. `oob_get_payload` → note the `domain`.
+2. Set the SSRF parameter to `http://<domain>/ssrf-probe`.
+3. Send the request.
+4. `oob_poll since_id=0` — a `dns` or `http` interaction from the target's
+   egress IP confirms blind SSRF.
+
 ## References
 
 - OWASP WSTG SSRF: `https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/07-Input_Validation_Testing/19-Testing_for_Server-Side_Request_Forgery`

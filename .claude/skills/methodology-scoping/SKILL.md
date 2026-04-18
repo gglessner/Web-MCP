@@ -104,6 +104,16 @@ Any asset in the "maybe" bucket must be resolved before it is touched.
 Undocumented scope expansion — even unintentional — can void the authorisation
 that protects the tester legally.
 
+## Write `engagement.toml`
+
+Once the scope record above is agreed, encode it as `engagement.toml` at the
+repo root (copy `engagement.example.toml`). The `[scope].hosts` list is the
+mechanical guardrail every `recon-*` and `testing-*` skill relies on —
+browser-mcp and burp-mcp refuse hosts not listed there. Populate
+`[credentials.*]` with the engagement-supplied test accounts; the model
+references them as `{{CRED:<name>.<field>}}` and never sees the literals.
+See `docs/engagement-setup.md` for the full walkthrough.
+
 ## Finding writeup
 
 <!-- Methodology skill — does not itself produce findings. -->

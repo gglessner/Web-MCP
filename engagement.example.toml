@@ -1,0 +1,26 @@
+# Copy to engagement.toml (gitignored) and fill in. All sections optional;
+# an absent file = no scope enforcement, no credential handling.
+
+[engagement]
+name = "client-YYYY-engagement"
+
+[scope]
+# Exact hosts, *.suffix wildcards, or CIDR ranges. Tools refuse anything else.
+hosts = ["app.example.com", "*.api.example.com", "10.0.0.0/8"]
+
+[credentials.user1]
+username = "lowpriv@example.com"
+password = "CHANGE_ME"
+
+[credentials.admin]
+username = "admin@example.com"
+password = "CHANGE_ME"
+
+# [identities.*] is normally written by browser_capture_identity, but you can
+# seed it manually (paste a cookie/JWT) and the agent will use it immediately.
+# [identities.user1]
+# cookies = [{name = "session", value = "...", domain = "app.example.com"}]
+# headers = {Authorization = "Bearer ..."}
+
+[oob]
+provider = "interactsh"

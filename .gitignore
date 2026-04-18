@@ -20,3 +20,5 @@ config.local.toml
 claude_config.json
 # Per-engagement evidence captures
 evidence/
+# Per-engagement scope/credentials/identities (see engagement.example.toml)
+engagement.toml

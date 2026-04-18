@@ -9,8 +9,13 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
+from urllib.parse import urlparse
+
 from common.config import load_config
+from common.credstore import CredStore, UnknownPlaceholder
+from common.engagement import Engagement
 from common.logging import setup_logger
+from common.mcp_base import ErrorCode, error_envelope
 
 from .tools import BrowserSession
 
@@ -36,6 +41,19 @@ def _tool_schemas() -> list[Tool]:
             name="browser_navigate",
             description="Navigate the current tab to a URL and wait for load event.",
             inputSchema={"type": "object", "required": ["url"], "properties": {"url": {"type": "string"}}},
+        ),
+        Tool(
+            name="browser_capture_identity",
+            description=("Capture in-scope cookies + Authorization header from the current "
+                         "session and write them as [identities.<name>] in engagement.toml."),
+            inputSchema={"type": "object", "required": ["name"],
+                         "properties": {"name": {"type": "string"}}},
+        ),
+        Tool(
+            name="browser_apply_identity",
+            description="Load a stored identity's cookies into the browser session.",
+            inputSchema={"type": "object", "required": ["name"],
+                         "properties": {"name": {"type": "string"}}},
         ),
         Tool(name="browser_snapshot", description="DOM + accessibility tree snapshot.", inputSchema={"type": "object"}),
         Tool(
@@ -114,10 +132,19 @@ def _tool_schemas() -> list[Tool]:
     ]
 
 
+_SCOPE_EXEMPT = {"browser_launch", "browser_close", "browser_capture_identity",
+                 "browser_apply_identity"}
+
+
 async def _async_main() -> None:
     cfg = load_config(WORKSPACE / "config.toml")
     logger = setup_logger("browser-mcp", log_dir=WORKSPACE / cfg.logging.dir, level=cfg.logging.level)
     logger.info("startup", extra={"cfg": str(cfg.source)})
+
+    engagement = Engagement.load(WORKSPACE / "engagement.toml")
+    credstore = CredStore(engagement)
+    if engagement is not None:
+        logger.info("engagement loaded", extra={"scope_hosts": engagement.scope_hosts()})
 
     session = BrowserSession(
         chrome_candidates=cfg.browser.chrome_candidates,
@@ -126,6 +153,7 @@ async def _async_main() -> None:
         user_data_dir_root=cfg.browser.user_data_dir_root,
         navigation_timeout_s=cfg.browser.navigation_timeout_s,
         evidence_root=WORKSPACE / cfg.evidence.dir,
+        engagement=engagement,
     )
 
     server = Server("browser-mcp")
@@ -136,6 +164,20 @@ async def _async_main() -> None:
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict) -> list[TextContent]:
+        try:
+            arguments = credstore.expand(arguments or {})
+        except UnknownPlaceholder as e:
+            return [TextContent(type="text", text=json.dumps(
+                error_envelope(ErrorCode.BAD_INPUT, f"unknown credential placeholder {e}")))]
+
+        if engagement is not None and name not in _SCOPE_EXEMPT:
+            host = (urlparse(arguments.get("url", "")).hostname
+                    if name == "browser_navigate" else session.current_host)
+            if host is not None and not engagement.in_scope(host):
+                return [TextContent(type="text", text=json.dumps(
+                    error_envelope(ErrorCode.OUT_OF_SCOPE,
+                                   f"{host!r} not in engagement.toml [scope].hosts")))]
+
         try:
             if name == "browser_launch":
                 result = await session.launch(
@@ -181,13 +223,17 @@ async def _async_main() -> None:
                 )
             elif name == "browser_network_log":
                 result = session.network_log(since_seq=int(arguments.get("since_seq", 0)))
+            elif name == "browser_capture_identity":
+                result = await session.capture_identity(arguments["name"])
+                credstore.refresh_identities()
+            elif name == "browser_apply_identity":
+                result = await session.apply_identity(arguments["name"])
             else:
-                from common.mcp_base import ErrorCode, error_envelope
                 result = error_envelope(ErrorCode.BAD_INPUT, f"unknown tool: {name}")
         except Exception as e:
             logger.exception("tool crashed", extra={"tool": name})
-            from common.mcp_base import ErrorCode, error_envelope
             result = error_envelope(ErrorCode.INTERNAL, f"{type(e).__name__}: {e}")
+        result = credstore.filter(result)
         return [TextContent(type="text", text=json.dumps(result))]
 
     async with stdio_server() as (read, write):

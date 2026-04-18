@@ -47,7 +47,7 @@ except Exception as e:
     _filter = None
     _logger = None
     _MCP_ARMOR_AVAILABLE = False
-    print(f"MCP Armor initialization failed: {e}")
+    print(f"MCP Armor initialization failed: {e}", file=sys.stderr)
 
 
 def _filter_response(result, tool_name: str):
@@ -102,7 +102,15 @@ def _mcp_tool_with_armor(func):
     @functools.wraps(func)
     def _wrapped(*args, **kwargs):
         if _logger:
-            _logger.log_request(func.__name__, {"args": list(args), "kwargs": kwargs})
+            # Filter request args before they hit the log file — a user can
+            # legitimately pass a token as a tool argument (e.g. searching
+            # for a leaked credential), and that must not land on disk.
+            raw_args = {"args": list(args), "kwargs": kwargs}
+            if _filter is not None:
+                safe_args, _ = _filter.filter_dict(raw_args)
+            else:
+                safe_args = raw_args
+            _logger.log_request(func.__name__, safe_args)
         try:
             result = func(*args, **kwargs)
         except Exception as e:
@@ -355,10 +363,15 @@ def list_issues(
         if assignee:
             kwargs["assignee"] = assignee
 
+        # Filter out PRs BEFORE applying the limit. PyGithub returns PRs from
+        # the issues endpoint; slicing first means a page full of PRs yields
+        # an empty result even when issues exist further in.
         results = []
-        for issue in repo.get_issues(**kwargs)[:max_results]:
+        for issue in repo.get_issues(**kwargs):
             if issue.pull_request:
                 continue
+            if len(results) >= max_results:
+                break
             results.append(
                 {
                     "number": issue.number,
@@ -997,7 +1010,7 @@ def list_dependabot_alerts(
                         vuln.get("first_patched_version", {}) or {}
                     ).get("identifier"),
                     "advisory_summary": advisory.get("summary"),
-                    "advisory_description": advisory.get("description", "")[:500],
+                    "advisory_description": (advisory.get("description") or "")[:500],
                     "cve_id": advisory.get("cve_id"),
                     "cvss_score": (advisory.get("cvss", {}) or {}).get("score"),
                     "cwes": [

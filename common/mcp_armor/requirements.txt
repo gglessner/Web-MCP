@@ -1,0 +1,4 @@
+# MCP Content Filter Dependencies
+
+# Core dependencies
+pyyaml>=6.0

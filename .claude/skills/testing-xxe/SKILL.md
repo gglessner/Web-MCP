@@ -82,6 +82,16 @@ burp_proxy_request(id=<N>)
   - `burp_repeater_send` call and response for tester reproducibility.
 - **Recommended fix:** Disable DTD processing entirely in the XML parser (implementation varies by library — e.g., `FEATURE_SECURE_PROCESSING` in Java, `LIBXML_NOENT` removal in PHP, `XmlResolver = null` in .NET). Prefer JSON APIs where XML is not required.
 
+## Blind detection (OOB)
+
+When the response gives no direct signal, use the OOB receiver:
+
+1. `oob_get_payload` → note the `domain`.
+2. Embed an external entity: `<!DOCTYPE x [<!ENTITY e SYSTEM "http://<domain>/xxe">]>` and reference `&e;`.
+3. Send the request.
+4. `oob_poll since_id=0` — a `dns` or `http` interaction confirms the parser
+   resolved the external entity.
+
 ## References
 
 - OWASP WSTG INPV-07: <https://owasp.org/www-project-web-security-testing-guide/stable/4-Web_Application_Security_Testing/07-Input_Validation_Testing/07-Testing_for_XML_Injection>

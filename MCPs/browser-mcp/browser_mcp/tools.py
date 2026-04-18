@@ -7,10 +7,12 @@ import shutil
 import tempfile
 import time
 from collections import deque
+from urllib.parse import urlparse
 
 from pathlib import Path
 
 from common.cdp import CDPError, CDPSession, discover_targets
+from common.engagement import Engagement
 from common.evidence import EvidencePathError, write_evidence
 from common.mcp_base import ErrorCode, error_envelope, ok_envelope
 
@@ -35,6 +37,7 @@ class BrowserSession:
         user_data_dir_root: str,
         navigation_timeout_s: int = 30,
         evidence_root: Path | None = None,
+        engagement: Engagement | None = None,
     ) -> None:
         self._candidates = chrome_candidates
         self._cdp_port = cdp_port
@@ -42,6 +45,7 @@ class BrowserSession:
         self._udd_root = user_data_dir_root
         self._nav_timeout = navigation_timeout_s
         self._evidence_root = evidence_root
+        self._engagement = engagement
 
         self._proc = None
         self._udd: str | None = None
@@ -50,6 +54,7 @@ class BrowserSession:
         self._network_log: deque[dict] = deque(maxlen=5000)
         self._network_seq = 0
         self._load_events: asyncio.Queue[float] = asyncio.Queue()
+        self._current_host: str | None = None
 
     def is_attached(self) -> bool:
         return self._cdp is not None and self._proc is not None and self._proc.poll() is None
@@ -189,7 +194,51 @@ class BrowserSession:
                 f"load event not received within {self._nav_timeout}s",
                 detail={"url": url},
             )
+        self._current_host = urlparse(url).hostname
         return ok_envelope({"url": url})
+
+    @property
+    def current_host(self) -> str | None:
+        return self._current_host
+
+    async def capture_identity(self, name: str) -> dict:
+        if self._engagement is None:
+            return error_envelope(ErrorCode.BAD_INPUT, "no engagement.toml loaded")
+        if self._cdp is None:
+            return error_envelope(ErrorCode.TARGET_NOT_ATTACHED, "browser not launched")
+        all_cookies = (await self._cdp.send("Network.getAllCookies")).get("cookies", [])
+        cookies = [
+            {"name": c["name"], "value": c["value"], "domain": c["domain"]}
+            for c in all_cookies
+            if self._engagement.in_scope(c.get("domain", "").lstrip("."))
+        ]
+        headers: dict[str, str] = {}
+        for entry in reversed(self._network_log):
+            if entry.get("method") != "Network.requestWillBeSent":
+                continue
+            req = entry.get("params", {}).get("request", {})
+            if not self._engagement.in_scope(req.get("url", "")):
+                continue
+            auth = (req.get("headers") or {}).get("Authorization")
+            if auth:
+                headers["Authorization"] = auth
+            break
+        self._engagement.write_identity(name, cookies=cookies, headers=headers)
+        return ok_envelope({
+            "name": name, "cookies": len(cookies), "headers": list(headers),
+            "captured_at": self._engagement.identity(name)["captured_at"],
+        })
+
+    async def apply_identity(self, name: str) -> dict:
+        if self._engagement is None:
+            return error_envelope(ErrorCode.BAD_INPUT, "no engagement.toml loaded")
+        ident = self._engagement.identity(name)
+        if ident is None:
+            return error_envelope(ErrorCode.BAD_INPUT, f"unknown identity {name!r}")
+        if self._cdp is None:
+            return error_envelope(ErrorCode.TARGET_NOT_ATTACHED, "browser not launched")
+        await self._cdp.send("Network.setCookies", {"cookies": ident.get("cookies", [])})
+        return ok_envelope({"name": name, "cookies": len(ident.get("cookies", []))})
 
     async def wait_for(self, selector: str, *, timeout_s: float = 10.0,
                        state: str = "attached") -> dict:

@@ -13,6 +13,7 @@ class ErrorCode(str, Enum):
     BAD_INPUT = "BAD_INPUT"
     UPSTREAM_HTTP = "UPSTREAM_HTTP"
     INTERNAL = "INTERNAL"
+    OUT_OF_SCOPE = "OUT_OF_SCOPE"
 
 
 def ok_envelope(data: Any) -> dict:

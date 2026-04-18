@@ -12,8 +12,26 @@ from common.burp_client import (
     BurpUnavailable,
     BurpUpstreamError,
 )
+from common.engagement import Engagement
 from common.evidence import EvidencePathError, write_evidence
 from common.mcp_base import ErrorCode, error_envelope, ok_envelope
+
+
+def _apply_identity(raw_b64: str, ident: dict) -> str:
+    raw = base64.b64decode(raw_b64)
+    head, sep, body = raw.partition(b"\r\n\r\n")
+    lines = head.split(b"\r\n")
+    drop = {b"cookie"} | {h.lower().encode() for h in (ident.get("headers") or {})}
+    kept = [lines[0]] + [
+        ln for ln in lines[1:]
+        if ln.split(b":", 1)[0].strip().lower() not in drop
+    ]
+    cookie = "; ".join(f"{c['name']}={c['value']}" for c in ident.get("cookies", []))
+    if cookie:
+        kept.append(f"Cookie: {cookie}".encode())
+    for k, v in (ident.get("headers") or {}).items():
+        kept.append(f"{k}: {v}".encode())
+    return base64.b64encode(b"\r\n".join(kept) + sep + body).decode()
 
 
 def _reconstruct_response(status: int | None, headers: list[dict] | None,
@@ -26,8 +44,30 @@ def _reconstruct_response(status: int | None, headers: list[dict] | None,
 
 
 async def handle(tool: str, args: dict, *, bridge_url: str,
-                 evidence_root: Path | None = None) -> dict:
+                 evidence_root: Path | None = None,
+                 engagement: Engagement | None = None,
+                 oob=None) -> dict:
     try:
+        if tool == "oob_get_payload":
+            if oob is None:
+                return error_envelope(ErrorCode.INTERNAL, "OOB receiver not configured")
+            return ok_envelope(oob.get_payload())
+        if tool == "oob_poll":
+            if oob is None:
+                return error_envelope(ErrorCode.INTERNAL, "OOB receiver not configured")
+            return ok_envelope(oob.poll(since_id=int(args.get("since_id", 0))))
+
+        if tool in ("burp_http_send", "burp_repeater_send") and "as_identity" in args:
+            if engagement is None:
+                return error_envelope(ErrorCode.BAD_INPUT,
+                                      "as_identity requires engagement.toml")
+            ident = engagement.identity(args["as_identity"])
+            if ident is None:
+                return error_envelope(ErrorCode.BAD_INPUT,
+                                      f"unknown identity {args['as_identity']!r}")
+            args = {**args, "raw_base64": _apply_identity(args["raw_base64"], ident)}
+            args.pop("as_identity")
+
         async with BurpClient(bridge_url) as c:
             if tool == "burp_meta":
                 return ok_envelope(await c.meta())

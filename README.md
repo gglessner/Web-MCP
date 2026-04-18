@@ -151,6 +151,10 @@ claude   # this session's burp-mcp talks to 8776; browser-mcp proxies via 8081
 state, so two Claude sessions sharing one Burp instance will clobber each
 other. One Burp per engagement directory avoids that.
 
+Per-engagement scope enforcement, credential placeholders, multi-identity
+testing, and OOB callbacks are configured in `engagement.toml` — see
+[`docs/engagement-setup.md`](docs/engagement-setup.md).
+
 ## Running the tests
 
 ```bash

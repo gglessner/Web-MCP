@@ -36,7 +36,7 @@ class ProxyConfig:
 class ServerConfig:
     name: str
     base_url: str
-    token: str
+    token: str = field(repr=False)
     description: str = ""
     # Derived from base_url for URL matching (e.g. "github.com", "github.corp.com")
     hostname: str = ""
@@ -115,6 +115,7 @@ def load_config() -> AppConfig:
                 "The MCP server will start but all API calls will fail.",
                 file=sys.stderr,
             )
+        env_no_verify = os.environ.get("GITHUB_MCP_SSL_NO_VERIFY", "").strip().lower()
         return AppConfig(
             servers={
                 "github.com": ServerConfig(
@@ -126,6 +127,7 @@ def load_config() -> AppConfig:
                 )
             },
             default_server="github.com",
+            ssl_verify=env_no_verify not in ("true", "1", "yes"),
         )
 
     # Parse proxy settings
@@ -143,7 +145,15 @@ def load_config() -> AppConfig:
         if https_proxy or http_proxy:
             proxy = ProxyConfig(https=https_proxy, http=http_proxy)
 
-    ssl_verify = raw.get("ssl_verify", True)
+    # TLS server verification toggle. Resolution order:
+    #   1. config.json: "ssl_verify": false
+    #   2. mcp.json env block: GITHUB_MCP_SSL_NO_VERIFY=true
+    #   3. default: verify (true)
+    if "ssl_verify" in raw:
+        ssl_verify = bool(raw["ssl_verify"])
+    else:
+        env_no_verify = os.environ.get("GITHUB_MCP_SSL_NO_VERIFY", "").strip().lower()
+        ssl_verify = env_no_verify not in ("true", "1", "yes")
     ca_bundle = raw.get("ca_bundle") or os.environ.get("REQUESTS_CA_BUNDLE")
 
     # Parse servers
