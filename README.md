@@ -113,6 +113,44 @@ resolve. If upstream flattens the layout in the future, update `cwd`.
 4. From a shell: `curl -s http://127.0.0.1:8775/meta` — should return edition
    and version.
 
+## Running multiple engagements on one machine
+
+Each engagement gets its **own copy of this directory**. That isolates
+`evidence/`, `logs/`, scope, and config per engagement. Two ports are
+machine-global and must be unique per copy:
+
+| Port | Where to set it |
+|---|---|
+| Burp bridge (default 8775) | Launch Burp with `-Dwebmcp.bridge.port=<N>` (or env `WEBMCP_BRIDGE_PORT`); set matching `bridge_url` in `config.toml` |
+| Burp proxy listener (default 8080) | Burp → Proxy → Proxy settings → edit listener; set matching `default_proxy` in `config.toml` |
+
+The Chrome CDP port is picked ephemerally (`cdp_port = 0`), so no
+coordination is needed there.
+
+**Per-engagement setup:**
+
+```bash
+cp -r Web-MCP Web-MCP-acme
+cd Web-MCP-acme
+export WEB_MCP_ROOT="$(pwd)"
+
+# Pick unused ports for this engagement, e.g. bridge 8776 / proxy 8081
+sed -i 's|http://127.0.0.1:8775|http://127.0.0.1:8776|' config.toml
+sed -i 's|127.0.0.1:8080|127.0.0.1:8081|' config.toml
+
+# Launch this engagement's Burp with its own bridge port
+_JAVA_OPTIONS="-Dwebmcp.bridge.port=8776" burpsuite &
+# In Burp: change the proxy listener to 8081 and load
+# MCPs/burp-mcp/burp-ext/build/libs/burp-mcp-bridge.jar.
+# Output tab should read: "burp-mcp-bridge listening on 127.0.0.1:8776".
+
+claude   # this session's burp-mcp talks to 8776; browser-mcp proxies via 8081
+```
+
+`burp_match_replace_set` and `burp_scope_modify` mutate **Burp-project-global**
+state, so two Claude sessions sharing one Burp instance will clobber each
+other. One Burp per engagement directory avoids that.
+
 ## Running the tests
 
 ```bash

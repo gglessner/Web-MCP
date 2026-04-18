@@ -18,6 +18,7 @@ from .chrome_launcher import (
     ChromeNotFoundError,
     build_chrome_argv,
     launch_chrome,
+    read_devtools_active_port,
     resolve_chrome_binary,
 )
 
@@ -94,11 +95,19 @@ class BrowserSession:
         )
         self._proc = launch_chrome(argv)
 
+        port = self._cdp_port
+        if port == 0:
+            try:
+                port = read_devtools_active_port(udd)
+            except TimeoutError as e:
+                await self.close()
+                return error_envelope(ErrorCode.INTERNAL, str(e))
+
         # Poll for CDP ready
         ws_url: str | None = None
         for _ in range(50):
             try:
-                targets = await discover_targets(f"http://127.0.0.1:{self._cdp_port}")
+                targets = await discover_targets(f"http://127.0.0.1:{port}")
                 for t in targets:
                     if t.get("type") == "page" and "webSocketDebuggerUrl" in t:
                         ws_url = t["webSocketDebuggerUrl"]
@@ -123,7 +132,7 @@ class BrowserSession:
         await self._cdp.send("Runtime.enable")
         await self._cdp.send("DOM.enable")
 
-        return ok_envelope({"chrome_binary": binary, "cdp_url": ws_url})
+        return ok_envelope({"chrome_binary": binary, "cdp_port": port, "cdp_url": ws_url})
 
     async def close(self) -> dict:
         if self._cdp_cm is not None:

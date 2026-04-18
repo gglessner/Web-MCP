@@ -5,6 +5,7 @@ import pytest
 from browser_mcp.chrome_launcher import (
     ChromeNotFoundError,
     build_chrome_argv,
+    read_devtools_active_port,
     resolve_chrome_binary,
 )
 
@@ -47,3 +48,13 @@ def test_resolve_chrome_binary_raises_when_none_found(monkeypatch):
     monkeypatch.setattr(shutil, "which", lambda x: None)
     with pytest.raises(ChromeNotFoundError):
         resolve_chrome_binary(["nope1", "nope2"])
+
+
+def test_read_devtools_active_port(tmp_path):
+    (tmp_path / "DevToolsActivePort").write_text("41234\n/devtools/browser/abc\n")
+    assert read_devtools_active_port(str(tmp_path), timeout_s=1.0) == 41234
+
+
+def test_read_devtools_active_port_timeout(tmp_path):
+    with pytest.raises(TimeoutError):
+        read_devtools_active_port(str(tmp_path), timeout_s=0.2)

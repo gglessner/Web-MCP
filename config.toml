@@ -6,7 +6,8 @@ bridge_url = "http://127.0.0.1:8775"
 chrome_candidates = ["chromium", "chromium-browser", "google-chrome", "chrome"]
 default_proxy = "127.0.0.1:8080"
 headless = false
-cdp_port = 9222
+# 0 = let Chrome pick an ephemeral port (read back from DevToolsActivePort).
+cdp_port = 0
 navigation_timeout_s = 30
 user_data_dir_root = "/tmp"
 

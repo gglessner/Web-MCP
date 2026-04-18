@@ -8,7 +8,9 @@ class BurpMcpExtension : BurpExtension {
 
     override fun initialize(api: MontoyaApi) {
         api.extension().setName("burp-mcp-bridge")
-        val port = 8775
+        val port = System.getProperty("webmcp.bridge.port")?.toIntOrNull()
+            ?: System.getenv("WEBMCP_BRIDGE_PORT")?.toIntOrNull()
+            ?: 8775
         server = HttpBridgeServer(api, port).also { it.start() }
         api.logging().logToOutput("burp-mcp-bridge listening on 127.0.0.1:$port")
         api.extension().registerUnloadingHandler {

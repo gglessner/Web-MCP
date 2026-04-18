@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import time
 from pathlib import Path
 
 
@@ -47,6 +48,20 @@ def build_chrome_argv(
     if headless:
         argv.insert(1, "--headless=new")
     return argv
+
+
+def read_devtools_active_port(user_data_dir: str, *, timeout_s: float = 5.0) -> int:
+    """Return the CDP port Chrome bound when launched with --remote-debugging-port=0."""
+    path = Path(user_data_dir) / "DevToolsActivePort"
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        try:
+            return int(path.read_text().splitlines()[0])
+        except (FileNotFoundError, IndexError, ValueError):
+            time.sleep(0.05)
+    raise TimeoutError(
+        f"DevToolsActivePort not written under {user_data_dir} within {timeout_s}s"
+    )
 
 
 def launch_chrome(argv: list[str]) -> subprocess.Popen:
