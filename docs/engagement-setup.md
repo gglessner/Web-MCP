@@ -21,6 +21,23 @@ read at startup. It does four things:
 If the file is absent, none of this is active — current behaviour is
 preserved. If it's present with `hosts = []`, scope is **fail-closed**.
 
+## What the model can and can't see
+
+The model **never reads `engagement.toml`**. A PreToolUse hook blocks `Read`,
+`Grep`, and any `Bash` command referencing the path, and project instructions
+(`CLAUDE.md`) tell it not to work around the block. Instead it calls
+`engagement_info`, which returns:
+
+```json
+{"name": "...", "scope_hosts": [...],
+ "credentials": {"user1": ["password", "username"], "admin": [...]},
+ "identities": {"user1": {"cookies": 2, "headers": ["Authorization"], "captured_at": "..."}},
+ "oob_provider": "interactsh"}
+```
+
+— names and field names only, never values. That's enough to write
+`{{CRED:user1.password}}` and `as_identity="user1"`.
+
 ## 1. Create the file
 
 ```bash
@@ -96,3 +113,24 @@ vulnerability. Requires `interactsh-client` on `PATH` (preinstalled on Kali).
 | `INTERNAL: OOB receiver not configured` | No `engagement.toml` loaded (oob is only set up when one exists). |
 | `RuntimeError: interactsh-client not on PATH` | `sudo apt install interactsh-client` or `go install github.com/projectdiscovery/interactsh/cmd/interactsh-client@latest`. |
 | Identity stops working mid-test (401s) | Session expired. Re-run the login + `browser_capture_identity <name>` flow; the file and redaction filter update in place. |
+
+## Hardening (optional, hard boundary)
+
+The hook + instruction layers stop a *cooperative* model. They do **not** stop
+a prompt-injected or adversarial model that writes a script to read the file
+via an unblocked path. If your threat model includes that, the only robust
+defence is filesystem permissions — make the file unreadable by the process
+that runs the model's Bash/Read tools:
+
+```bash
+# Run the MCP servers (which legitimately read engagement.toml) as a
+# dedicated user; run Claude Code's shell as your normal user.
+sudo useradd -r webmcp
+sudo chown webmcp:webmcp engagement.toml
+sudo chmod 600 engagement.toml
+# Then launch the MCP servers via sudo -u webmcp in .mcp.json's "command".
+```
+
+Under that setup, even `python3 -c "open('engagement.toml').read()"` from the
+model's Bash tool gets `PermissionError`. The MCP servers (running as
+`webmcp`) still read it fine.

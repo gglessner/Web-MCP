@@ -106,13 +106,18 @@ that protects the tester legally.
 
 ## Write `engagement.toml`
 
-Once the scope record above is agreed, encode it as `engagement.toml` at the
-repo root (copy `engagement.example.toml`). The `[scope].hosts` list is the
-mechanical guardrail every `recon-*` and `testing-*` skill relies on —
-browser-mcp and burp-mcp refuse hosts not listed there. Populate
-`[credentials.*]` with the engagement-supplied test accounts; the model
-references them as `{{CRED:<name>.<field>}}` and never sees the literals.
-See `docs/engagement-setup.md` for the full walkthrough.
+Once the scope record above is agreed, the **tester** writes `engagement.toml`
+at the repo root (copy `engagement.example.toml`). The `[scope].hosts` list is
+the mechanical guardrail every `recon-*` and `testing-*` skill relies on —
+browser-mcp and burp-mcp refuse hosts not listed there. The tester populates
+`[credentials.*]` with the engagement-supplied test accounts.
+
+**Do not read `engagement.toml`** — it contains credentials. Call the
+`engagement_info` MCP tool to discover available credential names, identity
+names, and scope hosts without seeing any secret values. Reference credentials
+as `{{CRED:<name>.<field>}}`; the MCP servers expand the placeholder
+server-side and redact the literal in all outputs. See
+`docs/engagement-setup.md` for the full walkthrough.
 
 ## Finding writeup
 

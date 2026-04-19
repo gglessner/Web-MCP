@@ -52,6 +52,34 @@ def test_credentials_and_identities_accessors(tmp_path):
     assert e.identity("ghost") is None
 
 
+def test_info_has_names_but_no_values(tmp_path):
+    p = write(tmp_path, """
+        [engagement]
+        name = "acme"
+        [scope]
+        hosts = ["app.acme.com"]
+        [credentials.user1]
+        username = "alice"
+        password = "s3cr3t"
+        [identities.user1]
+        cookies = [{name="sid", value="SESSIONABC", domain="x"}]
+        headers = {Authorization = "Bearer TOK"}
+        captured_at = "2026-04-18T00:00:00Z"
+    """)
+    e = Engagement.load(p)
+    info = e.info()
+    assert info["name"] == "acme"
+    assert info["scope_hosts"] == ["app.acme.com"]
+    assert info["credentials"] == {"user1": ["password", "username"]}
+    assert info["identities"]["user1"]["cookies"] == 1
+    assert info["identities"]["user1"]["headers"] == ["Authorization"]
+    import json as _json
+    blob = _json.dumps(info)
+    assert "s3cr3t" not in blob
+    assert "SESSIONABC" not in blob
+    assert "TOK" not in blob
+
+
 def test_write_identity_roundtrip(tmp_path):
     p = write(tmp_path, """
         [scope]

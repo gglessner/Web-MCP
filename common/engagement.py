@@ -72,6 +72,24 @@ class Engagement:
     def oob_provider(self) -> str:
         return self._data.get("oob", {}).get("provider", "interactsh")
 
+    def info(self) -> dict[str, Any]:
+        """Structure-only summary safe to return to the LLM — no secret values."""
+        creds = {name: sorted(fields) for name, fields in self.credentials().items()}
+        idents: dict[str, Any] = {}
+        for name, ident in self.identities().items():
+            idents[name] = {
+                "cookies": len(ident.get("cookies", [])),
+                "headers": sorted((ident.get("headers") or {}).keys()),
+                "captured_at": ident.get("captured_at"),
+            }
+        return {
+            "name": self._data.get("engagement", {}).get("name"),
+            "scope_hosts": self.scope_hosts(),
+            "credentials": creds,
+            "identities": idents,
+            "oob_provider": self.oob_provider(),
+        }
+
     # ── identity write (atomic) ──────────────────────────────────────
     def write_identity(self, name: str, *, cookies: list[dict], headers: dict[str, str]) -> None:
         idents = self._data.setdefault("identities", {})

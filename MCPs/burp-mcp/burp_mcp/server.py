@@ -117,6 +117,14 @@ def _tool_schemas() -> list[Tool]:
             }},
         ),
         Tool(
+            name="engagement_info",
+            description=("Structure-only view of engagement.toml: scope hosts, credential "
+                         "NAMES and FIELD NAMES (no values), identity names with cookie "
+                         "count + header names, oob provider. Use this instead of reading "
+                         "engagement.toml — that file contains secrets the model must not see."),
+            inputSchema={"type": "object"},
+        ),
+        Tool(
             name="oob_get_payload",
             description="Get the OOB interaction domain/url to embed in blind SSRF/XXE/SQLi/cmd-injection payloads.",
             inputSchema={"type": "object"},

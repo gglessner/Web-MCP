@@ -48,6 +48,10 @@ async def handle(tool: str, args: dict, *, bridge_url: str,
                  engagement: Engagement | None = None,
                  oob=None) -> dict:
     try:
+        if tool == "engagement_info":
+            if engagement is None:
+                return error_envelope(ErrorCode.BAD_INPUT, "no engagement.toml loaded")
+            return ok_envelope(engagement.info())
         if tool == "oob_get_payload":
             if oob is None:
                 return error_envelope(ErrorCode.INTERNAL, "OOB receiver not configured")

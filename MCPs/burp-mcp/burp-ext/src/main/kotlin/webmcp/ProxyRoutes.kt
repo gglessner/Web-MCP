@@ -13,11 +13,13 @@ fun registerProxyRoutes(router: Router) {
         val cursor = ctx.query["cursor"]?.toIntOrNull() ?: 0
 
         val all: List<ProxyHttpRequestResponse> = ctx.api.proxy().history()
-        val filtered = all.asSequence()
-            .filter { host == null || it.finalRequest().httpService().host() == host }
-            .filter { method == null || it.finalRequest().method().equals(method, ignoreCase = true) }
-            .filter { status == null || (it.originalResponse()?.statusCode()?.toInt() ?: -1) == status }
-            .filter { contains == null || it.contains(contains, false) }
+        // Carry the absolute index through filtering so the returned `id` is always
+        // dereferenceable by /proxy/request/{id} (which does all[idx]).
+        val filtered = all.withIndex()
+            .filter { (_, h) -> host == null || h.finalRequest().httpService().host() == host }
+            .filter { (_, h) -> method == null || h.finalRequest().method().equals(method, ignoreCase = true) }
+            .filter { (_, h) -> status == null || (h.originalResponse()?.statusCode()?.toInt() ?: -1) == status }
+            .filter { (_, h) -> contains == null || h.contains(contains, false) }
             .toList()
 
         val page = filtered.drop(cursor).take(limit)
@@ -26,7 +28,7 @@ fun registerProxyRoutes(router: Router) {
         Response(200, mapOf(
             "ok" to true,
             "data" to mapOf(
-                "entries" to page.mapIndexed { i, h -> summarize(h, cursor + i) },
+                "entries" to page.map { (idx, h) -> summarize(h, idx) },
                 "next_cursor" to nextCursor,
                 "total" to filtered.size,
             ),

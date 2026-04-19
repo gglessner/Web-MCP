@@ -15,7 +15,7 @@ from common.config import load_config
 from common.credstore import CredStore, UnknownPlaceholder
 from common.engagement import Engagement
 from common.logging import setup_logger
-from common.mcp_base import ErrorCode, error_envelope
+from common.mcp_base import ErrorCode, error_envelope, ok_envelope
 
 from .tools import BrowserSession
 
@@ -41,6 +41,14 @@ def _tool_schemas() -> list[Tool]:
             name="browser_navigate",
             description="Navigate the current tab to a URL and wait for load event.",
             inputSchema={"type": "object", "required": ["url"], "properties": {"url": {"type": "string"}}},
+        ),
+        Tool(
+            name="engagement_info",
+            description=("Structure-only view of engagement.toml: scope hosts, credential "
+                         "NAMES and FIELD NAMES (no values), identity names with cookie "
+                         "count + header names, oob provider. Use this instead of reading "
+                         "engagement.toml — that file contains secrets the model must not see."),
+            inputSchema={"type": "object"},
         ),
         Tool(
             name="browser_capture_identity",
@@ -133,7 +141,7 @@ def _tool_schemas() -> list[Tool]:
 
 
 _SCOPE_EXEMPT = {"browser_launch", "browser_close", "browser_capture_identity",
-                 "browser_apply_identity"}
+                 "browser_apply_identity", "engagement_info"}
 
 
 async def _async_main() -> None:
@@ -223,6 +231,9 @@ async def _async_main() -> None:
                 )
             elif name == "browser_network_log":
                 result = session.network_log(since_seq=int(arguments.get("since_seq", 0)))
+            elif name == "engagement_info":
+                result = (ok_envelope(engagement.info()) if engagement is not None
+                          else error_envelope(ErrorCode.BAD_INPUT, "no engagement.toml loaded"))
             elif name == "browser_capture_identity":
                 result = await session.capture_identity(arguments["name"])
                 credstore.refresh_identities()
